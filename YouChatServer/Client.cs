@@ -107,6 +107,12 @@ namespace YouChatServer
         const int FriendRequestReceiver = 49;
         const int FriendRequestResponseSender = 50;
         const int FriendRequestResponseReceiver = 51;
+        const int FriendsProfileDetailsRequest = 52;
+        const int FriendsProfileDetailsResponse = 53;
+        const int PasswordUpdateRequest = 54;
+        const int PasswordUpdateResponse = 55;
+        const int UserConnectionCheckRequest = 56;
+        const int UserConnectionCheckResponse = 57;
         const int UserDetailsRequest = 46;
         const int UserDetailsResponse = 47;
         const int registerRequest = 1;
@@ -165,10 +171,10 @@ namespace YouChatServer
         const string InitialProfileSettingsCheckResponse3 = "The login has been successfully completed but You haven't selected status yet";
         const string InitialProfileSettingsCheckResponse4 = "The login has been successfully completed";
 
-        const string PasswordRenewalMessageResponse1 = "This password has already been chosen by you before";
-        const string PasswordRenewalMessageResponse2 = "Your new password has been saved";
-        const string PasswordRenewalMessageResponse3 = "An error occured";
-
+        const string PasswordMessageResponse1 = "This password has already been chosen by you before";
+        const string PasswordMessageResponse2 = "Your new password has been saved";
+        const string PasswordMessageResponse3 = "An error occured";
+        const string PasswordMessageResponse4 = "Your past details aren't matching";
         const string FriendRequestResponseSender1 = "Approval";
         const string FriendRequestResponseSender2 = "Rejection";
 
@@ -324,7 +330,7 @@ namespace YouChatServer
                         else if (requestNumber == sendMessageRequest)
                         {
                             string message = _ClientNick + "#" + DecryptedMessageDetails;
-                            Broadcast(sendMessageResponse, message);
+                            Multicast(sendMessageResponse, message);
                             //Broadcast(sendMessageResponse + "$" + message);
 
                         }
@@ -353,7 +359,7 @@ namespace YouChatServer
 
                             }
                         }
-                        else if(requestNumber == ResetPasswordRequest)
+                        else if (requestNumber == ResetPasswordRequest)
                         {
                             if (UserDetails.DataHandler.IsMatchingUsernameAndEmailAddressExist(DecryptedMessageDetails))
                             {
@@ -368,41 +374,66 @@ namespace YouChatServer
 
                             }
                         }
-                        else if (requestNumber == PasswordRenewalMessageRequest)
+                        else if ((requestNumber == PasswordRenewalMessageRequest) || (requestNumber == PasswordUpdateRequest))
                         {
+                            bool IsPasswordRenewalMessageRequest = (requestNumber == PasswordRenewalMessageRequest);
+                            int identifierNumber; //maybe instead of handling both here i should write a method that get the idnumber and send the message accordinglly...
+                            bool HasAccessToChange = true;
                             string[] data = DecryptedMessageDetails.Split('#');
                             string username = data[0];
-                            string password = data[1];
-                            if (UserDetails.DataHandler.PasswordIsExist(username, password)) //means the password already been chosen once by the user...
+                            string NewPassword = data[1];
+                            if (IsPasswordRenewalMessageRequest)
                             {
-                                SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse1);
-                                //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse1);
-
+                                identifierNumber = PasswordRenewalMessageResponse;
                             }
                             else
                             {
-                                if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
+                                identifierNumber = PasswordUpdateResponse;
+
+                            }
+                            if (!IsPasswordRenewalMessageRequest)
+                            {
+                                string OldPassword = data[2];
+                                if (!UserDetails.DataHandler.PasswordIsExist(username, OldPassword)) //means the password already been chosen once by the user...
                                 {
-                                    UserDetails.DataHandler.AddColumnToUserPastPasswords();
-                                }
-                                if (UserDetails.DataHandler.SetNewPassword(username, password) > 0)
-                                {
-                                    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse2);
-                                    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
-                                }
-                                else
-                                {
-                                    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse3);
-                                    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
+                                    HasAccessToChange = false;
+                                    SendMessage(identifierNumber, PasswordMessageResponse4); //past password not matching..
 
                                 }
                             }
-                        }
-                        else if(requestNumber == InitialProfileSettingsCheckRequest)
+                            if (HasAccessToChange)
+                            {
+                                if (UserDetails.DataHandler.PasswordIsExist(username, NewPassword)) //means the password already been chosen once by the user...
+                                {
+                                    SendMessage(identifierNumber, PasswordMessageResponse1);
+
+                                }
+                                else
+                                {
+                                    if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
+                                    {
+                                        UserDetails.DataHandler.AddColumnToUserPastPasswords();
+                                    }
+                                    if (UserDetails.DataHandler.SetNewPassword(username, NewPassword) > 0)
+                                    {
+                                        SendMessage(identifierNumber, PasswordMessageResponse2);
+                                        //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
+                                    }
+                                    else
+                                    {
+                                        SendMessage(identifierNumber, PasswordMessageResponse3);
+                                        //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
+
+                                    }
+                                }
+                            }
+                            
+                        } 
+                        else if (requestNumber == InitialProfileSettingsCheckRequest)
                         {
                             if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
                             {
-                                SendMessage(InitialProfileSettingsCheckResponse, loginResponse3);
+                                SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse1);
 
                             }
                             else if (!UserDetails.DataHandler.ProfilePictureIsExist(_ClientNick)) //todo - change this - after doing the captcha i should ask the server for this information
@@ -420,15 +451,19 @@ namespace YouChatServer
                             {
                                 SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse4);
                                 //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse1);
+                                if (UserDetails.DataHandler.SetUserOnline(_ClientNick)>0)
+                                {
+                                    //was ok...
+                                }
 
                             }
                         }
-                        else if(requestNumber == UserDetailsRequest)
+                        else if (requestNumber == UserDetailsRequest)
                         {
                             string UserInformation = UserDetails.DataHandler.GetUserProfileSettings(_ClientNick);
                             SendMessage(UserDetailsResponse, UserInformation);
                         }
-                        else if(requestNumber == FriendRequestSender)
+                        else if (requestNumber == FriendRequestSender)
                         {
                             if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(DecryptedMessageDetails))
                             {
@@ -453,17 +488,38 @@ namespace YouChatServer
 
                             }
                         }
-                        else if(requestNumber == FriendRequestResponseSender)
+                        else if (requestNumber == FriendRequestResponseSender)
                         {
                             string[] data = DecryptedMessageDetails.Split('#'); //needs to string from the client the name of the user who sent and then the accept/deny...
                             string FriendRequestSenderUsername = data[0];
                             string FriendRequestReceiverUsername = _ClientNick;
                             string FriendRequestStatus = data[1];
-                            if (UserDetails.DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus)>0)
+                            if (UserDetails.DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
                             {
                                 if (FriendRequestStatus == FriendRequestResponseSender1)
                                 {
-                                    //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
+                                    if ((UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestSenderUsername)) || (UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestReceiverUsername)))
+                                    {
+                                        UserDetails.DataHandler.AddColumnToFriends();
+                                    }
+                                    if (UserDetails.DataHandler.AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0) //one worked...
+                                    {
+                                        if (UserDetails.DataHandler.AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername) > 0) //both worked...
+                                        {
+                                            Unicast(FriendRequestResponseReceiver, "the friend request has been accepted", FriendRequestSenderUsername);
+                                        }
+                                    }
+                                    //if (UserDetails.DataHandler.setne(username, password) > 0)
+                                    //{
+                                    //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse2);
+                                    //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
+                                    //}
+                                    //else
+                                    //{
+                                    //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse3);
+                                    //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
+
+                                    //}                                    //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
                                 }
                                 else if (FriendRequestStatus == FriendRequestResponseSender2)
                                 {
@@ -475,6 +531,37 @@ namespace YouChatServer
                                 //was an error...
                             }
 
+                        }
+                        else if (requestNumber == FriendsProfileDetailsRequest)
+                        {
+                            string FriendsName = UserDetails.DataHandler.GetFriendList(_ClientNick);
+                            Dictionary<string, string> FriendsProfileDetailsDictionary = UserDetails.DataHandler.GetFriendsProfileInformation(FriendsName);
+                            //here i check the need for split messages...
+                            List<string> FriendsProfileDetails = new List<string>();
+                            int FriendProfileDetailsLength;
+                            int index = 0;
+                            foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
+                            {
+                                FriendProfileDetailsLength = kvp.Value.Length;
+                                if (false)                                //needs to check if adding the content of the profiledetails will be two much length
+                                {
+                                    index += 1;
+                                }
+                                FriendsProfileDetails[index] += "#" + kvp.Value;
+
+                            }
+                            foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
+                            {
+                                SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet); //maybe i should split to couple of messages...
+
+                            }
+                        }
+                        else if(requestNumber == disconnectRequest)
+                        {
+                            if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
+                            {
+                                //was ok...
+                            }
                         }
                     }
                     

@@ -16,6 +16,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using System.Drawing;
 using YouChatServer.Encryption;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Runtime.Remoting.Messaging;
 
 namespace YouChatServer.UserDetails
 {
@@ -95,12 +96,39 @@ namespace YouChatServer.UserDetails
 
                 //string Sql2 = CreateSqlCommandTextForUserPastPasswordsInserting(Username, Md5Password);
                 string Sql2 = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES('" + Username + "','" + Md5Password + "')";
+                string Sql3 = "INSERT INTO Friends (Username) VALUES('" + Username + "')";
 
                 connection.Open();
                 cmd.CommandText = Sql1;
                 int x = cmd.ExecuteNonQuery();
                 cmd.CommandText = Sql2;
                 int y = cmd.ExecuteNonQuery();
+                cmd.CommandText = Sql3;
+                int z = cmd.ExecuteNonQuery();
+                connection.Close();
+                if ((x > 0) && (y > 0) && (z > 0))
+                {
+                    return x;
+                }
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+        public static int SetUserOnline(string username)
+        {
+            //set the user online and set the last seen time to now - not must
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "UPDATE UserDetails SET Online = '" + 1 + "' WHERE Username = '" + username + "'";
+                cmd.CommandText = sql;
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
                 connection.Close();
                 return x;
             }
@@ -111,6 +139,29 @@ namespace YouChatServer.UserDetails
                 return 0;
             }
         }
+        public static int SetUserOffline(string username)
+        {
+            //set the user offline and set the last seen time to now...
+            try
+            {
+                DateTime LastSeenTime = DateTime.Now;
+                cmd.Connection = connection;
+                string sql = "UPDATE UserDetails SET Online = '" + 0 + "', LastSeenTime = '" + LastSeenTime + "' WHERE Username = '" + username + "'";
+                cmd.CommandText = sql;
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
+                connection.Close();
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+
+
 
         private static int NumberOfColumns(string TableName)
         {
@@ -139,7 +190,7 @@ namespace YouChatServer.UserDetails
             string Sql = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES('" + Username + "','" + Md5Password; //maybe i dont need this if i set it to nullable so i dont need to insert a value...
             string TableName = "UserPastPasswords";
             int ColumnNumber = NumberOfColumns(TableName);
-            for (int i = 3; i< ColumnNumber; i++)
+            for (int i = 3; i < ColumnNumber; i++)
             {
                 Sql += "','" + null;
             }
@@ -313,6 +364,244 @@ namespace YouChatServer.UserDetails
                 return 0;
             }
         }
+        public static int AddFriend(string UsernameAdding, string UsernameAdded)
+        {
+            //needs to change the passwordupdate date and password values in the main table
+            // needs to change the password to the pastPasswords table
+            try
+            {
+                string FriendColumn = GetFriendColumnToInsert(UsernameAdding);
+                cmd.Connection = connection;
+                string sql = "UPDATE Friends SET [" + FriendColumn + "] = '" + UsernameAdded + "' WHERE Username = '" + UsernameAdding + "'";
+
+                cmd.CommandText = sql;
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
+
+                connection.Close();
+                //for the pastpasswords table i need to fine the last null value and replace it with a value
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+        public static string GetFriendColumnToInsert(string Username) //will be used in order to find where is the first null value...
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT * FROM Friends WHERE Username = '" + Username + "'";
+
+                cmd.CommandText = sql;
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+                string columnName = "";
+                if (Reader.Read())
+                {
+                    for (int i = 2; i < Reader.FieldCount; i++) //0 - id, 1- username
+                    {
+                        var Value = Reader[i];
+                        if (Reader.IsDBNull(i) || Reader[i] == null)
+                        {
+                            columnName = Reader.GetName(i);
+                            connection.Close();
+                            Reader.Close();
+                            return columnName;
+                        }
+                    }
+                }
+                connection.Close();
+                Reader.Close();
+                return columnName;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return "";
+            }
+        }
+        public static string GetFriendList(string username)
+        {
+            StringBuilder Friends = new StringBuilder();
+            string friends = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
+            // if true i need to send the user a message and then he will add those friend requests to his friend request area...
+            try
+            {
+                cmd.Connection = connection;
+                string Sql = "SELECT * FROM Friends WHERE Username = '" + username + "'";
+                connection.Open();
+                cmd.CommandText = Sql;
+                SqlDataReader Reader = cmd.ExecuteReader();
+                while (Reader.Read())
+                {
+                    for (int i = 2; i < Reader.FieldCount; i++) // 0- id/ 1-username, 2,3,4 - friends names...
+                    {
+                        Friends.Append(Reader[i].ToString());
+                        Friends.Append("#");
+                    }
+                }
+                if (Friends.Length > 0)
+                {
+                    Friends.Length -= 1;
+                }
+
+                Reader.Close();
+                connection.Close();
+                friends = Friends.ToString();
+                return friends;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return friends;
+            }
+        }
+        //public static Dictionary<string, string> GetFriendsProfileInformation(string Friends)
+        //{
+        //    try
+        //    {
+        //        string[] FriendName = Friends.Split('#');
+
+        //        Dictionary<string,string> FriendsProfileDetails = new Dictionary<string, string>();
+        //        cmd.Connection = connection;
+        //        connection.Open();
+        //        SqlDataReader Reader;
+        //        string ProfileInformation;
+
+        //        string ProfilePicture;
+        //        string ProfileStatus;
+        //        DateTime LastSeenTime;
+        //        bool LastSeenProperty;
+        //        bool OnlineProperty;
+        //        bool ProfilePictureProperty;
+        //        bool StatusProperty;
+
+        //        foreach (string usernameToSearch in FriendName)
+        //        {
+        //            ProfileInformation = "";
+        //            ProfilePicture = "";
+        //            ProfileStatus = "";
+        //            LastSeenTime = new DateTime();
+        //            LastSeenProperty = true;
+        //            OnlineProperty = true;
+        //            ProfilePictureProperty = true;
+        //            StatusProperty = true;
+        //            string Sql = "SELECT ProfilePicture, Status, LastSeenTime, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty FROM UserDetails WHERE Username = '" + usernameToSearch + "'";
+        //            cmd.CommandText = Sql;
+        //            Reader = cmd.ExecuteReader();
+        //            while (Reader.Read())
+        //            {
+        //                ProfilePicture = Reader.GetString(0); //needs to change the profilepicture in database from image to string...
+        //                ProfileStatus = Reader.GetString(1);
+        //                LastSeenProperty = Reader.GetBoolean(2);
+        //                LastSeenTime = Reader.GetDateTime(3);
+
+        //                OnlineProperty = Reader.GetBoolean(4);
+        //                ProfilePictureProperty = Reader.GetBoolean(5);
+        //                StatusProperty = Reader.GetBoolean(6);
+
+
+        //                //FriendsProfileInformation.Append(Reader[i].ToString());
+        //                //FriendsProfileInformation.Append("#");
+        //                // Add the details to the list
+        //            }
+        //              Reader.Close();
+        //              connection.Close();
+        //            ProfileInformation = usernameToSearch + "#" + ProfilePicture + "#" + ProfileStatus + "#" + LastSeenTime.ToString("yyyy-MM-dd") + "#" + LastSeenProperty + "#" + OnlineProperty + "#" + ProfilePictureProperty + "#" + StatusProperty;
+        //            // Add the list of details to the dictionary
+        //            FriendsProfileDetails[usernameToSearch] = ProfileInformation;
+        //        }
+
+        //        return FriendsProfileDetails;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show(ex.ToString());
+        //        Console.WriteLine(ex.Message);
+        //        return null;
+        //    }
+
+        //}
+
+        public static Dictionary<string, string> GetFriendsProfileInformation(string Friends)
+        {
+            try
+            {
+                string[] FriendName = Friends.Split('#');
+
+                Dictionary<string, string> FriendsProfileDetails = new Dictionary<string, string>();
+
+                foreach (string usernameToSearch in FriendName)
+                {
+                    FriendsProfileDetails[usernameToSearch] = GetFriendProfileInformation(usernameToSearch);
+                }
+
+                return FriendsProfileDetails;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return null;
+            }
+
+        }
+        public static string GetFriendProfileInformation(string FriendName) //will be used when logging in a loop to get all friends info + when creating a new friends and needing his details...
+        {
+            try
+            {
+                string ProfilePicture = "";
+                string ProfileStatus = "";
+                DateTime LastSeenTime = new DateTime();
+                bool LastSeenProperty = true;
+                bool OnlineProperty = true;
+                bool ProfilePictureProperty = true;
+                bool StatusProperty = true;
+                string Sql = "SELECT ProfilePicture, ProfileStatus, LastSeenTime, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty FROM UserDetails WHERE Username = '" + FriendName + "'";
+                cmd.Connection = connection;
+
+                connection.Open();
+                cmd.CommandText = Sql;
+                SqlDataReader Reader = cmd.ExecuteReader();
+                while (Reader.Read())
+                {
+                    ProfilePicture = Reader.GetString(0); //needs to change the profilepicture in database from image to string...
+                    ProfileStatus = Reader.GetString(1);
+                    LastSeenProperty = Reader.GetBoolean(2);
+                    LastSeenTime = Reader.GetDateTime(3);
+
+                    OnlineProperty = Reader.GetBoolean(4);
+                    ProfilePictureProperty = Reader.GetBoolean(5);
+                    StatusProperty = Reader.GetBoolean(6);
+
+
+                    //FriendsProfileInformation.Append(Reader[i].ToString());
+                    //FriendsProfileInformation.Append("#");
+                    // Add the details to the list
+                }
+                Reader.Close();
+                connection.Close();
+                string FriendProfileInformation = FriendName + "^" + ProfilePicture + "^" + ProfileStatus + "^" + LastSeenTime.ToString("yyyy-MM-dd") + "^" + LastSeenProperty + "^" + OnlineProperty + "^" + ProfilePictureProperty + "^" + StatusProperty;
+                return FriendProfileInformation;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return "";
+            }
+
+
+        }
+
+
+
 
         public static bool IsMatchingUsernameAndTagLineIdExist(string details)
         {
@@ -631,6 +920,8 @@ namespace YouChatServer.UserDetails
             }
         }
 
+      
+
         public static bool PasswordIsExist(string Username, string Password)
         {
             try
@@ -738,6 +1029,40 @@ namespace YouChatServer.UserDetails
                 return false;
             }
         }
+        public static bool CheckFullFriendsCapacity(string Username) //to call to this method when i need to decide to add a new column for another password
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT * FROM Friends WHERE Username = '" + Username + "'";
+                cmd.CommandText = sql;
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+                if (Reader.Read()) // Check if a row was found
+                {
+                    for (int i = 0; i < Reader.FieldCount; i++)
+                    {
+                        if (Reader.IsDBNull(i)) // Check if the column is null
+                        {
+                            Reader.Close();
+                            connection.Close();
+                            return false;
+                        }
+                    }
+                }
+
+                // Close the reader and connection when done
+                Reader.Close();
+                connection.Close();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+        }
         public static void AddColumnToUserPastPasswords() //after this i need to add the new password...
         {
             try
@@ -770,6 +1095,54 @@ namespace YouChatServer.UserDetails
                         NewColumnName = "Password-" + (PasswordNumber + 1);
                     }
                     sql = "ALTER TABLE UserPastPasswords ADD [" + NewColumnName + "] NVARCHAR(50) NULL";
+                    cmd.CommandText = sql;
+                    cmd.ExecuteNonQuery();
+                }
+                else
+                {
+                    // Handle the case where no columns exist in the table.
+                }
+                connection.Close();
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+            }
+        }
+        public static void AddColumnToFriends() //after this i need to add the new password...
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string TableName = "Friends";
+                string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                cmd.CommandText = sql;
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+
+                string lastColumnName = null;
+
+                while (Reader.Read())
+                {
+                    lastColumnName = Reader["COLUMN_NAME"].ToString();
+                }
+
+                Reader.Close();
+
+                if (lastColumnName != null)
+                {
+                    string NewColumnName = "";
+                    string[] FriendColumnInformation = lastColumnName.Split('-');
+                    string FriendNumberValueAsString = FriendColumnInformation[1];
+                    int FriendNumber;
+
+                    if (int.TryParse(FriendNumberValueAsString, out FriendNumber))
+                    {
+                        NewColumnName = "Friend-" + (FriendNumber + 1);
+                    }
+                    sql = "ALTER TABLE Friends ADD [" + NewColumnName + "] NVARCHAR(50) NULL";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
