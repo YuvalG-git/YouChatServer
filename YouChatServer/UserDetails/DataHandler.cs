@@ -318,7 +318,7 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string Sql = "SELECT SenderUsername FROM FriendRequest WHERE ReceiverUserame = '" + username + "' And RequestStatus = 'Pending'";
+                string Sql = "SELECT SenderUsername FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
                 connection.Open();
                 cmd.CommandText = Sql;
                 SqlDataReader Reader = cmd.ExecuteReader();
@@ -853,10 +853,37 @@ namespace YouChatServer.UserDetails
                 return "";
             }
         }
+        public static string GetProfilePicture(string Username)
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT ProfilePicture FROM UserDetails WHERE Username = '" + Username + "'";
+                cmd.CommandText = sql;
+                connection.Open();
+
+                object result = cmd.ExecuteScalar();
+                string profilePicture = "";
+                // Check if a result was found
+                if (result != null && result != DBNull.Value)
+                {
+                    profilePicture = (string)result;
+                }
+                connection.Close();
+                return profilePicture;
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return "";
+            }
+        }
         public static string GetUserProfileSettings(string Username)
         {
             cmd.Connection = connection;
-            string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty FROM UserDetails WHERE Username = '" + Username + "'";
+            string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId FROM UserDetails WHERE Username = '" + Username + "'";
             cmd.CommandText = sql;
             connection.Open();
             string ProfilePicture = "";
@@ -868,6 +895,7 @@ namespace YouChatServer.UserDetails
             int TextSizeProperty = 2;
             int MessageGapProperty = 10;
             bool EnterKeyPressedProperty = false;
+            string TagLineId = "";
             SqlDataReader Reader = cmd.ExecuteReader();
             while (Reader.Read())
             {
@@ -881,11 +909,12 @@ namespace YouChatServer.UserDetails
                 TextSizeProperty = Reader.GetByte(6);
                 MessageGapProperty = Reader.GetInt16(7);
                 EnterKeyPressedProperty = Reader.GetBoolean(8);
+                TagLineId = Reader.GetString(9);
 
             }
             Reader.Close();
             connection.Close();
-            string UserProfileSettings = Username + "#" + ProfilePicture + "#" + ProfileStatus + "#" + LastSeenProperty + "#" + OnlineProperty + "#" + ProfilePictureProperty + "#" + StatusProperty + "#" + TextSizeProperty + "#" + MessageGapProperty + "#" + EnterKeyPressedProperty;
+            string UserProfileSettings = Username + "#" + ProfilePicture + "#" + ProfileStatus + "#" + LastSeenProperty + "#" + OnlineProperty + "#" + ProfilePictureProperty + "#" + StatusProperty + "#" + TextSizeProperty + "#" + MessageGapProperty + "#" + EnterKeyPressedProperty + "#" + TagLineId;
             return UserProfileSettings;
         }
 

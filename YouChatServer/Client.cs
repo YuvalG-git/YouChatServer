@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using YouChatServer.Encryption;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
@@ -113,6 +114,8 @@ namespace YouChatServer
         const int PasswordUpdateResponse = 55;
         const int UserConnectionCheckRequest = 56;
         const int UserConnectionCheckResponse = 57;
+        const int PastFriendRequestsRequest = 58;
+        const int PastFriendRequestsResponse = 59;
         const int UserDetailsRequest = 46;
         const int UserDetailsResponse = 47;
         const int registerRequest = 1;
@@ -463,30 +466,41 @@ namespace YouChatServer
                             string UserInformation = UserDetails.DataHandler.GetUserProfileSettings(_ClientNick);
                             SendMessage(UserDetailsResponse, UserInformation);
                         }
-                        else if (requestNumber == FriendRequestSender)
+                        else if (requestNumber == FriendRequestSender) //todo - needs to check if the user already sent a friend request before..
                         {
-                            if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(DecryptedMessageDetails))
-                            {
-                                //ask friend request..
-                                string[] data = DecryptedMessageDetails.Split('#');
-                                string FriendRequestReceiverUsername = data[0];
-                                string FriendRequestSenderUsername = _ClientNick;
-                                if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
-                                {
-                                    //was successful
-                                    //to check if he is online...
-                                    if (UserIsConnected(FriendRequestReceiverUsername))
-                                    {
-                                        Unicast(FriendRequestReceiver, "", FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
-                                        //need to handle when logging in if there were message request sent before...
-                                    }
-                                }
-                                else
-                                {
-                                    //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
-                                }
+                            string[] data = DecryptedMessageDetails.Split('#');
+                            string FriendRequestReceiverUsername = data[0];
+                            string FriendRequestSenderUsername = _ClientNick;
 
+                            if (FriendRequestSenderUsername != FriendRequestReceiverUsername)
+                            {
+                                if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(DecryptedMessageDetails))
+                                {
+                                    //ask friend request..
+                                    if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
+                                    {
+                                        //was successful
+                                        //to check if he is online...
+                                        if (UserIsConnected(FriendRequestReceiverUsername))
+                                        {
+                                            string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
+                                            if (profilePicture != "")
+                                            {
+                                                string userDetails = FriendRequestSenderUsername + "#" + profilePicture;
+                                                Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
+                                                                                                                   //need to handle when logging in if there were message request sent before...
+                                            }
+
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
+                                    }
+
+                                }
                             }
+                            
                         }
                         else if (requestNumber == FriendRequestResponseSender)
                         {
@@ -540,21 +554,21 @@ namespace YouChatServer
                             List<string> FriendsProfileDetails = new List<string>();
                             int FriendProfileDetailsLength;
                             int index = 0;
-                            foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
-                            {
-                                FriendProfileDetailsLength = kvp.Value.Length;
-                                if (false)                                //needs to check if adding the content of the profiledetails will be two much length
-                                {
-                                    index += 1;
-                                }
-                                FriendsProfileDetails[index] += "#" + kvp.Value;
+                            //foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
+                            //{
+                            //    FriendProfileDetailsLength = kvp.Value.Length;
+                            //    if (false)                                //needs to check if adding the content of the profiledetails will be two much length
+                            //    {
+                            //        index += 1;
+                            //    }
+                            //    FriendsProfileDetails[index] += "#" + kvp.Value;
 
-                            }
-                            foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
-                            {
-                                SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet); //maybe i should split to couple of messages...
+                            //}
+                            //foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
+                            //{
+                            //    SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet); //maybe i should split to couple of messages...
 
-                            }
+                            //}
                         }
                         else if(requestNumber == disconnectRequest)
                         {
@@ -562,6 +576,26 @@ namespace YouChatServer
                             {
                                 //was ok...
                             }
+                        }
+                        else if (requestNumber == PastFriendRequestsRequest)
+                        {
+                            string FriendRequestNamesOfSenders = UserDetails.DataHandler.CheckFriendRequests(_ClientNick);
+                            string[] names = FriendRequestNamesOfSenders.Split('#');
+                            string DetailsOfFriendRequestSenders = "";
+                            foreach (string name in names)
+                            {
+                                string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
+                                if (profilePicture != "")
+                                {
+                                    DetailsOfFriendRequestSenders = name + "^" + profilePicture + "#";
+                                }
+                            }
+                            if (DetailsOfFriendRequestSenders.EndsWith("#"))
+                            {
+                                DetailsOfFriendRequestSenders = DetailsOfFriendRequestSenders.Substring(0, DetailsOfFriendRequestSenders.Length - 1);
+                            }
+                            SendMessage(PastFriendRequestsResponse, DetailsOfFriendRequestSenders);
+
                         }
                     }
                     
