@@ -4,15 +4,18 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Drawing;
 using YouChatServer.Encryption;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
+using Image = System.Drawing.Image;
 
 namespace YouChatServer
 {
@@ -548,31 +551,30 @@ namespace YouChatServer
                         }
                         else if (requestNumber == FriendsProfileDetailsRequest)
                         {
-                            string FriendsName = UserDetails.DataHandler.GetFriendList(_ClientNick);
-                            Dictionary<string, string> FriendsProfileDetailsDictionary = UserDetails.DataHandler.GetFriendsProfileInformation(FriendsName);
-                            //here i check the need for split messages...
-                            List<string> FriendsProfileDetails = new List<string>();
-                            int AllFriendProfileDetailsLength = 0;
-                            string FriendProfileDetails = "";
-                            int index = 0;
-                            foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
-                            {
-                                FriendProfileDetails = kvp.Value;
-                                byte[] currentUserDetailsBytes = Encoding.UTF8.GetBytes(FriendProfileDetails);
+                            //string FriendsName = UserDetails.DataHandler.GetFriendList(_ClientNick);
+                            //Dictionary<string, string> FriendsProfileDetailsDictionary = UserDetails.DataHandler.GetFriendsProfileInformation(FriendsName);
+                            ////here i check the need for split messages...
+                            //List<string> FriendsProfileDetails = new List<string>();
+                            //int AllFriendProfileDetailsLength = 0;
+                            //string FriendProfileDetails = "";
+                            //int index = 0;
+                            //foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
+                            //{
+                            //    FriendProfileDetails = "#" + kvp.Value;
+                            //    byte[] currentUserDetailsBytes = Encoding.UTF8.GetBytes(FriendProfileDetails);
 
-                                if (currentUserDetailsBytes.Length + AllFriendProfileDetailsLength > 1500)      //needs to check if adding the content of the profiledetails will be two much length
-                                {
-                                    index += 1;
-                                    AllFriendProfileDetailsLength = 0;
-                                }
-                                FriendsProfileDetails[index] += "#" + kvp.Value;
-                                AllFriendProfileDetailsLength += currentUserDetailsBytes.Length;
-                            }
-                            foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
-                            {
-                                FriendsProfileDetailsSet.Remove(0, 1);
-                                SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet); //maybe i should split to couple of messages...
-                            }
+                            //    if (currentUserDetailsBytes.Length + AllFriendProfileDetailsLength + 4> 1500)      //needs to check if adding the content of the profiledetails will be two much length
+                            //    {
+                            //        index += 1;
+                            //        AllFriendProfileDetailsLength = 0;
+                            //    }
+                            //    FriendsProfileDetails[index] += FriendProfileDetails;
+                            //    AllFriendProfileDetailsLength += currentUserDetailsBytes.Length;
+                            //}
+                            //foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
+                            //{
+                            //    SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet.Remove(0, 1)); //maybe i should split to couple of messages...
+                            //}
                         }
                         else if(requestNumber == disconnectRequest)
                         {
@@ -583,15 +585,29 @@ namespace YouChatServer
                         }
                         else if (requestNumber == PastFriendRequestsRequest)
                         {
-                            string FriendRequestNamesOfSenders = UserDetails.DataHandler.CheckFriendRequests(_ClientNick);
-                            string[] names = FriendRequestNamesOfSenders.Split('#');
+                            string FriendRequestNamesOfSendersAndRequestDates = UserDetails.DataHandler.CheckFriendRequests(_ClientNick);
+                            string[] FriendRequestDetails = FriendRequestNamesOfSendersAndRequestDates.Split('#');
+                            string[] SplittedFriendRequestDetails;
+                            string name;
                             string DetailsOfFriendRequestSenders = "";
-                            foreach (string name in names)
+                            //for (int index = FriendRequestDetails.Length - 1; index >= 0; index--)
+                            //{
+                            //    SplittedFriendRequestDetails = FriendRequestDetails[index].Split('^');
+                            //    name = SplittedFriendRequestDetails[0];
+                            //    string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
+                            //    if (profilePicture != "")
+                            //    {
+                            //        DetailsOfFriendRequestSenders = FriendRequestDetails[index] + "^" + profilePicture + "#";
+                            //    }
+                            //}
+                            foreach (string friendRequestDetails in FriendRequestDetails)
                             {
+                                SplittedFriendRequestDetails = friendRequestDetails.Split('^');
+                                name = SplittedFriendRequestDetails[0];
                                 string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
                                 if (profilePicture != "")
                                 {
-                                    DetailsOfFriendRequestSenders = name + "^" + profilePicture + "#";
+                                    DetailsOfFriendRequestSenders += friendRequestDetails + "^" + profilePicture + "#";
                                 }
                             }
                             if (DetailsOfFriendRequestSenders.EndsWith("#"))
@@ -802,6 +818,23 @@ namespace YouChatServer
             var random = new Random();
             return new string(Enumerable.Repeat(chars, 5).Select(s =>
             s[random.Next(s.Length)]).ToArray());
+        }
+
+        private void ReceiveImageUDP()
+        {
+            UdpClient udpListener = new UdpClient(12345); // Use the same port as the client
+
+            while (true)
+            {
+                IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] imageData = udpListener.Receive(ref clientEndPoint);
+
+                // Convert bytes to image
+                using (MemoryStream ms = new MemoryStream(imageData))
+                {
+                    Image receivedImage = Image.FromStream(ms);
+                }
+            }
         }
 
     }

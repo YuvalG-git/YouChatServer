@@ -312,19 +312,57 @@ namespace YouChatServer.UserDetails
         }
         public static string CheckFriendRequests(string username)
         {
+            //StringBuilder FriendRequestSenderUsernames = new StringBuilder();
+            //string Usernames = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
+            //// if true i need to send the user a message and then he will add those friend requests to his friend request area...
+            //try
+            //{
+            //    cmd.Connection = connection;
+            //    string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
+            //    connection.Open();
+            //    cmd.CommandText = Sql;
+            //    SqlDataReader Reader = cmd.ExecuteReader();
+            //    while (Reader.Read())
+            //    {
+            //        FriendRequestSenderUsernames.Append(Reader["SenderUsername"].ToString());
+            //        FriendRequestSenderUsernames.Append("#");
+
+            //    }
+            //    if (FriendRequestSenderUsernames.Length > 0)
+            //    {
+            //        FriendRequestSenderUsernames.Length -= 1;
+            //    }
+
+            //    Reader.Close();
+            //    connection.Close();
+            //    username = FriendRequestSenderUsernames.ToString();
+            //    return username;
+            //}
+            //catch (Exception ex)
+            //{
+            //    MessageBox.Show(ex.ToString());
+            //    Console.WriteLine(ex.Message);
+            //    return Usernames;
+            //}
             StringBuilder FriendRequestSenderUsernames = new StringBuilder();
             string Usernames = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
             // if true i need to send the user a message and then he will add those friend requests to his friend request area...
             try
             {
                 cmd.Connection = connection;
-                string Sql = "SELECT SenderUsername FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
+                string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
                 connection.Open();
                 cmd.CommandText = Sql;
                 SqlDataReader Reader = cmd.ExecuteReader();
+                DateTime requestDate = DateTime.Now;
                 while (Reader.Read())
                 {
                     FriendRequestSenderUsernames.Append(Reader["SenderUsername"].ToString());
+                    FriendRequestSenderUsernames.Append("^");
+                    requestDate = Convert.ToDateTime(Reader["RequestDate"]); //maybe to create a list or dictonary..
+                    FriendRequestSenderUsernames.Append(requestDate.ToString());
+
+
                     FriendRequestSenderUsernames.Append("#");
 
                 }
