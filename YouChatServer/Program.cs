@@ -34,6 +34,8 @@ namespace YouChatServer
         static void Main(string[] args)
         {
             Logger.LogInfo("Application started.");
+            Application.ApplicationExit += new EventHandler(ApplicationExitHandler);
+
             System.Net.IPAddress localAdd = System.Net.IPAddress.Parse(ipAddress);
             TcpListener listener = new TcpListener(localAdd, portNo);
             Console.WriteLine("Simple TCP Server");
@@ -65,6 +67,13 @@ namespace YouChatServer
         {
             Client user = new Client(tcp);
         }
+        private static void ApplicationExitHandler(object sender, EventArgs e)
+        {
+            // Add a "server down" message to the log before closing
+            Logger.LogInfo("Server down. Application is shutting down...");
 
+            // Perform any necessary cleanup before the application exits
+            Logger.CloseLogFiles();
+        }
     }
 }
