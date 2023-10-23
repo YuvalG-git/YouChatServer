@@ -61,8 +61,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CaptchaHandler\CaptchaCodeHandler.cs" />
+    <Compile Include="CaptchaHandler\CaptchaRotatingImageHandler.cs" />
     <Compile Include="ChatHistoryHandler.cs" />
     <Compile Include="Client.cs" />
+    <Compile Include="ClientAttemptsState.cs" />
     <Compile Include="Encryption\AESServiceProvider.cs" />
     <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\MD5.cs" />
@@ -72,6 +75,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RandomStringCreator.cs" />
+    <Compile Include="SmtpHandler.cs" />
     <Compile Include="UserDetails\DataHandler.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

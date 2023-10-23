@@ -16,6 +16,9 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using Image = System.Drawing.Image;
+using System.Threading;
+using System.Net.Mail;
+using YouChatServer.UserDetails;
 
 namespace YouChatServer
 {
@@ -30,6 +33,9 @@ namespace YouChatServer
         /// The list is static so all the clients will be able to obtain the list of current connected client
         /// </summary>
         public static Hashtable AllClients = new Hashtable();
+        //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
+        private Dictionary<IPAddress, ClientAttemptsState> _clientFailedAttempts = new Dictionary<IPAddress, ClientAttemptsState>();
+
         public static List<Client> clientsList = new List<Client>();
 
         /// <summary>
@@ -54,6 +60,8 @@ namespace YouChatServer
         /// Represents the IP address of the client
         /// </summary>
         private string _clientIP;
+
+        private IPAddress _clientAddress;
 
         /// <summary>
         /// Represents the client username
@@ -119,6 +127,12 @@ namespace YouChatServer
         const int UserConnectionCheckResponse = 57;
         const int PastFriendRequestsRequest = 58;
         const int PastFriendRequestsResponse = 59;
+        public const int BlockBeginning = 60;
+        public const int BlockEnding = 61;
+        const int VideoCallRequest = 62;
+        const int VideoCallResponse = 63;
+        const int VideoCallResponseSender = 64;
+        const int VideoCallResponseReciever = 65;
         const int UserDetailsRequest = 46;
         const int UserDetailsResponse = 47;
         const int registerRequest = 1;
@@ -183,9 +197,12 @@ namespace YouChatServer
         const string PasswordMessageResponse4 = "Your past details aren't matching";
         const string FriendRequestResponseSender1 = "Approval";
         const string FriendRequestResponseSender2 = "Rejection";
-
-
-
+        public const string BanBeginning = "You are banned";
+        public const string BanEnding = "Your ban is over";
+        const string VideoCallResponse1 = "Your friend is offline. Please try to call again.";
+        const string VideoCallResponse2 = "You have been asked to join a call";
+        const string VideoCallResponseResult1 = "Joining the video call";
+        const string VideoCallResponseResult2 = "Declining the video call";
 
         /// <summary>
         /// Represents rather the nickname has been sent
@@ -210,10 +227,12 @@ namespace YouChatServer
             _client = client;
             Logger.LogUserLogIn("The user has established a connection to the server.");
             // get the ip address of the client to register him with our client list
+            _clientAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
             _clientIP = client.Client.RemoteEndPoint.ToString();
             // Add the new client to our clients collection
             AllClients.Add(_clientIP, this);
             clientsList.Add(this);
+
             // Read data from the client async
             data = new byte[_client.ReceiveBufferSize];
 
@@ -328,6 +347,33 @@ namespace YouChatServer
                             }
                             else
                             {
+                                ClientAttemptsState clientAttemptsState;
+                                if (!_clientFailedAttempts.ContainsKey(_clientAddress))
+                                {
+                                    clientAttemptsState = new ClientAttemptsState(this);
+                                    _clientFailedAttempts[_clientAddress] = clientAttemptsState;
+                                }
+                                else
+                                {
+                                    clientAttemptsState = _clientFailedAttempts[_clientAddress];
+                                }
+                                clientAttemptsState.HandleFailedAttempt();
+                                //if (_clientFailedAttempts.ContainsKey(_clientIP))
+                                //{
+                                //    _clientFailedAttempts[_clientIP]++;
+
+                                //}
+                                //else
+                                //{
+                                //    _clientFailedAttempts[_clientIP] = 1;
+
+                                //}
+                                //if (_clientFailedAttempts[_clientIP] > 5)
+                                //{
+                                //    //handle waiting..
+                                //    // todo - handle block of spamming user and maybe do the following act:
+                                //    //to send a message to the user saying his account got blocked for 10 minutes because someone tried to enter..
+                                //}
                                 SendMessage(loginResponse, loginResponse2);
                                 //SendMessage(loginResponse + "$" + loginResponse2);
 
@@ -433,8 +479,8 @@ namespace YouChatServer
                                     }
                                 }
                             }
-                            
-                        } 
+
+                        }
                         else if (requestNumber == InitialProfileSettingsCheckRequest)
                         {
                             if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
@@ -457,7 +503,7 @@ namespace YouChatServer
                             {
                                 SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse4);
                                 //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse1);
-                                if (UserDetails.DataHandler.SetUserOnline(_ClientNick)>0)
+                                if (UserDetails.DataHandler.SetUserOnline(_ClientNick) > 0)
                                 {
                                     //was ok...
                                 }
@@ -491,7 +537,7 @@ namespace YouChatServer
                                             {
                                                 string userDetails = FriendRequestSenderUsername + "^" + profilePicture;
                                                 Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
-                                                                                                                   //need to handle when logging in if there were message request sent before...
+                                                                                                                            //need to handle when logging in if there were message request sent before...
                                             }
 
                                         }
@@ -503,7 +549,7 @@ namespace YouChatServer
 
                                 }
                             }
-                            
+
                         }
                         else if (requestNumber == FriendRequestResponseSender)
                         {
@@ -576,11 +622,14 @@ namespace YouChatServer
                             //    SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet.Remove(0, 1)); //maybe i should split to couple of messages...
                             //}
                         }
-                        else if(requestNumber == disconnectRequest)
+                        else if (requestNumber == disconnectRequest)
                         {
-                            if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
+                            if (_ClientNick != null)
                             {
-                                //was ok...
+                                if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
+                                {
+                                    //was ok...
+                                }
                             }
                         }
                         else if (requestNumber == PastFriendRequestsRequest)
@@ -616,6 +665,38 @@ namespace YouChatServer
                             }
                             SendMessage(PastFriendRequestsResponse, DetailsOfFriendRequestSenders);
 
+                        }
+                        else if (requestNumber == VideoCallRequest)
+                        {
+                            string friendName = DecryptedMessageDetails;
+                            if ((UserIsConnected(friendName)) && (DataHandler.StatusIsExist(friendName)))
+                            {
+                                //establish a udp connection between them two and the server...
+                                string messageContent = VideoCallResponse2 + "#" + _ClientNick;
+                                Unicast(VideoCallResponse, messageContent, friendName); //what if he is currently in a call? will it work //todo - needs to check that in the future
+                            }
+                            else
+                            {
+                                SendMessage(VideoCallResponse, VideoCallResponse1);
+
+                            }
+                        }
+                        else if (requestNumber == VideoCallResponseSender)
+                        {
+                            string[] messageContent = DecryptedMessageDetails.Split('#');
+                            string messageInformation = messageContent[0];
+                            string friendName = messageContent[1];
+                            if (messageInformation == VideoCallResponseResult1)
+                            {
+                                Unicast(VideoCallResponseReciever, VideoCallResponseResult1, friendName);
+                                //needs to create the udp connection...
+
+                            }
+                            else //the call wont happen...
+                            {
+                                Unicast(VideoCallResponseReciever, VideoCallResponseResult2, friendName);
+
+                            }
                         }
                     }
                     

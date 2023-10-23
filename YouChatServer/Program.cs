@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,6 +43,7 @@ namespace YouChatServer
             Console.WriteLine("Simple TCP Server");
             Console.WriteLine("Listening to ip {0} port: {1}", ipAddress, portNo);
             Console.WriteLine("Server is ready.");
+            //ReceiveAndEchoImageUDP();
             // Start listen to incoming connection requests
             listener.Start();
             // infinit loop.
@@ -56,6 +59,35 @@ namespace YouChatServer
                     Thread t = new Thread(() => StartClient(tcp));
                     t.Start();
                 }
+            }
+        }
+        public static void ReceiveAndEchoImageUDP()
+        {
+            UdpClient udpListener = new UdpClient(12345); // Listen on the specified port
+
+            while (true)
+            {
+                //string destinationClientId = DetermineDestinationClient(receivedFrame);
+
+                //if (clientEndpoints.TryGetValue(destinationClientId, out IPEndPoint destinationEndPoint))
+                //{
+                //    // Send the processed frame to the destination client
+                //    udpListener.Send(processedFrameData, processedFrameData.Length, destinationEndPoint);
+                //}
+                IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                byte[] imageData = udpListener.Receive(ref clientEndPoint);
+
+                // Convert bytes to image
+                using (MemoryStream ms = new MemoryStream(imageData))
+                {
+                    Image receivedImage = Image.FromStream(ms);
+
+                    // Display the received image (optional)
+                    Console.WriteLine("Received an image from a client.");
+                }
+
+                // Send the image back to the same client
+                udpListener.Send(imageData, imageData.Length, clientEndPoint);
             }
         }
 
