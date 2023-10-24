@@ -133,6 +133,8 @@ namespace YouChatServer
         const int VideoCallResponse = 63;
         const int VideoCallResponseSender = 64;
         const int VideoCallResponseReciever = 65;
+        const int GroupCreatorRequest = 66;
+        const int GroupCreatorResponse = 67;
         const int UserDetailsRequest = 46;
         const int UserDetailsResponse = 47;
         const int registerRequest = 1;
