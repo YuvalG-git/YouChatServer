@@ -19,6 +19,8 @@ using Image = System.Drawing.Image;
 using System.Threading;
 using System.Net.Mail;
 using YouChatServer.UserDetails;
+using Newtonsoft.Json;
+using YouChatServer.ChatHandler;
 
 namespace YouChatServer
 {
@@ -700,7 +702,15 @@ namespace YouChatServer
 
                             }
                         }
+                        else if (requestNumber == GroupCreatorRequest)
+                        {
+                            ChatCreator newChat = JsonConvert.DeserializeObject<ChatCreator>(DecryptedMessageDetails);
+
+                            //now i need to insert
+
+                        }
                     }
+
                     
 
                 }
