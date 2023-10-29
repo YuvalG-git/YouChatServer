@@ -249,8 +249,8 @@ namespace YouChatServer
                                           ReceiveMessage,
                                           null);
         }
-
-        public static string RandomKey(int Length)
+        
+    public static string RandomKey(int Length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string (Enumerable.Repeat(chars, Length).Select(s => s[Random.Next(s.Length)]).ToArray());
