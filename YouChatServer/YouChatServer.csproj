@@ -81,6 +81,7 @@
     <Compile Include="RandomStringCreator.cs" />
     <Compile Include="SmtpHandler.cs" />
     <Compile Include="UserDetails\DataHandler.cs" />
+    <Compile Include="XmlDataHandler.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

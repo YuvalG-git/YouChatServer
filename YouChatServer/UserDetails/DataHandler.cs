@@ -17,6 +17,8 @@ using System.Drawing;
 using YouChatServer.Encryption;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Runtime.Remoting.Messaging;
+using YouChatServer.ChatHandler;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace YouChatServer.UserDetails
 {
@@ -80,16 +82,17 @@ namespace YouChatServer.UserDetails
                 string day = DateData[0];
                 string DateInCurrectOrder = year + "-" + month + "-" + day;
                 string Md5Password = YouChatServer.Encryption.MD5.CreateMD5Hash(Password);
-                bool isTagLineExists = true;
-                string TagLine = "";
-                while (isTagLineExists)
-                {
-                    TagLine = RandomStringCreator.RandomString(6);
-                    if (!TaglineIsExist(TagLine))
-                    {
-                        isTagLineExists = false; //maybe to add a list of failed tagline - will be better to check this list rather then entire database...
-                    }
-                }
+                //bool isTagLineExists = true;
+                //string TagLine = "";
+                //while (isTagLineExists)
+                //{
+                //    TagLine = RandomStringCreator.RandomString(6);
+                //    if (!TaglineIsExist(TagLine))
+                //    {
+                //        isTagLineExists = false; //maybe to add a list of failed tagline - will be better to check this list rather then entire database...
+                //    }
+                //}
+                string TagLine = SetTagLine("UserDetails");
                 cmd.Connection = connection;
                 //string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, ProfilePicture, ProfileStatus) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + null + "','" + null + "')";
                 string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, TagLineId) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + TagLine + "')";
@@ -118,6 +121,20 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+        }
+        private static string SetTagLine(string DataBaseTableName)
+        {
+            bool isTagLineExists = true;
+            string TagLine = "";
+            while (isTagLineExists)
+            {
+                TagLine = RandomStringCreator.RandomString(6);
+                if (!TaglineIsExist(TagLine, DataBaseTableName))
+                {
+                    isTagLineExists = false; //maybe to add a list of failed tagline - will be better to check this list rather then entire database...
+                }
+            }
+            return TagLine;
         }
         public static int SetUserOnline(string username)
         {
@@ -699,12 +716,12 @@ namespace YouChatServer.UserDetails
             }
         }
 
-        public static bool TaglineIsExist(string Tagline)
+        public static bool TaglineIsExist(string Tagline, string DataBaseTableName)
         {
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE TaglineId = '" + Tagline + "'";
+                string sql = "SELECT COUNT(*) FROM " + DataBaseTableName + " WHERE TaglineId = '" + Tagline + "'";
                 cmd.CommandText = sql;
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
@@ -1224,6 +1241,188 @@ namespace YouChatServer.UserDetails
             {
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
+            }
+        }
+        public static void AddColumnToChats() //after this i need to add the new password...
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string TableName = "Chats";
+                string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                cmd.CommandText = sql;
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+
+                string lastColumnName = null;
+
+                while (Reader.Read())
+                {
+                    lastColumnName = Reader["COLUMN_NAME"].ToString();
+                }
+
+                Reader.Close();
+
+                if (lastColumnName != null)
+                {
+                    string NewColumnName = "";
+                    string[] ChatColumnInformation = lastColumnName.Split('-');
+                    string ChatNumberValueAsString = ChatColumnInformation[1];
+                    int ChatNumber;
+
+                    if (int.TryParse(ChatNumberValueAsString, out ChatNumber))
+                    {
+                        NewColumnName = "ChatParticipant-" + (ChatNumber + 1);
+                    }
+                    sql = "ALTER TABLE " + TableName + " ADD [" + NewColumnName + "] NVARCHAR(50) NULL";
+                    cmd.CommandText = sql;
+                    cmd.ExecuteNonQuery();
+                }
+                else
+                {
+                    // Handle the case where no columns exist in the table.
+                }
+                connection.Close();
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+            }
+        }
+        public static int CreateGroupChat(ChatCreator chat) //for when i want to add another particiapnt i need to first give him the group tagline as well becuase there might be couple group with the same name
+        {
+            try
+            {
+                string ChatName = chat._chatName;
+                List<string> ChatMembers = chat._chatParticipants;
+                string FirstChatMember = ChatMembers[0];
+                System.Drawing.Image ChatIcon;
+                byte[] ChatIconBytes = chat._chatProfilePictureBytes;
+                using (MemoryStream ms = new MemoryStream(ChatIconBytes))
+                {
+                    ChatIcon = System.Drawing.Image.FromStream(ms);
+                }
+                string ChatTagLine = SetTagLine("UserDetails");
+                cmd.Connection = connection;
+                string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
+
+                //now i need to add the other members...
+
+                connection.Open();
+                cmd.CommandText = Sql;
+                int x = cmd.ExecuteNonQuery();
+                connection.Close();
+                bool isNeededToAddColumn = false;
+                for (int index = 1; index< ChatMembers.Count; index++)
+                {
+                    if (isNeededToAddColumn || CheckFullChatsCapacity(ChatName, ChatTagLine))
+                    {
+                        isNeededToAddColumn = true;
+                        AddColumnToChats();
+                    }
+                    AddNewChatMember(ChatName, ChatTagLine, ChatMembers[index]);
+                }
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+        public static int AddNewChatMember(string ChatName, string ChatTagLine, string Username)
+        {
+            try
+            {
+                string ChatMemberColumn = GetChatMemberColumnToInsert(ChatName, ChatTagLine);
+                cmd.Connection = connection;
+                string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = '" + Username + "' WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
+
+                cmd.CommandText = sql;
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
+
+                connection.Close();
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+        public static string GetChatMemberColumnToInsert(string ChatName, string ChatTagLine) //will be used in order to find where is the first null value...
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
+
+                cmd.CommandText = sql;
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+                string columnName = "";
+                if (Reader.Read())
+                {
+                    for (int i = 7; i < Reader.FieldCount; i++) //0 - id, 1- username
+                    {
+                        var Value = Reader[i];
+                        if (Reader.IsDBNull(i) || Reader[i] == null)
+                        {
+                            columnName = Reader.GetName(i);
+                            connection.Close();
+                            Reader.Close();
+                            return columnName;
+                        }
+                    }
+                }
+                connection.Close();
+                Reader.Close();
+                return columnName;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return "";
+            }
+        }
+        public static bool CheckFullChatsCapacity(string ChatName, string ChatTagLine) //to call to this method when i need to decide to add a new column for another password
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'"; ;
+                cmd.CommandText = sql;
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+                if (Reader.Read()) // Check if a row was found
+                {
+                    for (int i = 7; i < Reader.FieldCount; i++)
+                    {
+                        if (Reader.IsDBNull(i)) // Check if the column is null
+                        {
+                            Reader.Close();
+                            connection.Close();
+                            return false;
+                        }
+                    }
+                }
+
+                // Close the reader and connection when done
+                Reader.Close();
+                connection.Close();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return false;
             }
         }
     }

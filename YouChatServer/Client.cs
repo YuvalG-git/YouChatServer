@@ -207,7 +207,7 @@ namespace YouChatServer
         const string VideoCallResponse2 = "You have been asked to join a call";
         const string VideoCallResponseResult1 = "Joining the video call";
         const string VideoCallResponseResult2 = "Declining the video call";
-
+        const string GroupCreatorResponse1 = "Group was successfully created";
         /// <summary>
         /// Represents rather the nickname has been sent
         /// </summary>
@@ -705,8 +705,14 @@ namespace YouChatServer
                         else if (requestNumber == GroupCreatorRequest)
                         {
                             ChatCreator newChat = JsonConvert.DeserializeObject<ChatCreator>(DecryptedMessageDetails);
-
-                            //now i need to insert
+                            if (DataHandler.CreateGroupChat(newChat) > 0)
+                            {
+                                SendMessage(GroupCreatorResponse, "Group was successfully created");
+                                List<string> chatMembers = newChat._chatParticipants;
+                                chatMembers.RemoveAt(0);
+                                ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
+                                //needs to send this group creation to every logged user...
+                            }
 
                         }
                     }
@@ -871,7 +877,19 @@ namespace YouChatServer
                 }
             }
         }
-
+        public void ChatMembersCast(int messageId, string messageContent, List<string> chatMembers)
+        {
+            foreach (DictionaryEntry c in AllClients)
+            {
+                foreach (string ChatMamber in chatMembers)
+                {
+                    if (((Client)(c.Value))._ClientNick == ChatMamber)
+                    {
+                        ((Client)(c.Value)).SendMessage(messageId, messageContent);
+                    }
+                }
+            }
+        }
         ///// <summary>
         ///// The Broadcast method sends the message to every client in the AllClients dictionary
         ///// </summary>
