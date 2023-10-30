@@ -87,6 +87,9 @@ namespace YouChatServer
         {
             while (true)
             {
+                //IPEndPoint clientEndPoint;
+                //if (clientEndpoints.TryGetValue(destinationClientId, out IPEndPoint destinationEndPoint))
+
                 //string destinationClientId = DetermineDestinationClient(receivedFrame);
 
                 //if (clientEndpoints.TryGetValue(destinationClientId, out IPEndPoint destinationEndPoint))
