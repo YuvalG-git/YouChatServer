@@ -31,6 +31,9 @@ namespace YouChatServer
         static UdpClient VideoUdpClient; //udp video/ screen share listener obje
         public static int maxConnectionsPerIP = 5; // Maximum connections allowed per IP
         public static Dictionary<string, int> connectionCounts = new Dictionary<string, int>();
+        public static List<IPEndPoint[]> videoCallMembersDetails = new List<IPEndPoint[]>();
+        //public static Dictionary<Guid, VideoCallMembers> VideoCalls = new Dictionary<Guid, VideoCallMembers>();
+
         /// <summary>
         /// The Main method sets up a TCP listener on the specified IP address and port number
         /// It then enters an infinite loop to accept incoming client connections
@@ -88,6 +91,8 @@ namespace YouChatServer
             while (true)
             {
                 //IPEndPoint clientEndPoint;
+                //string destinationClientId = DetermineDestinationClient(receivedFrame);
+
                 //if (clientEndpoints.TryGetValue(destinationClientId, out IPEndPoint destinationEndPoint))
 
                 //string destinationClientId = DetermineDestinationClient(receivedFrame);
@@ -98,6 +103,7 @@ namespace YouChatServer
                 //    udpListener.Send(processedFrameData, processedFrameData.Length, destinationEndPoint);
                 //}
                 IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+
                 byte[] imageData = VideoUdpClient.Receive(ref clientEndPoint);
 
                 // Convert bytes to image
@@ -108,6 +114,53 @@ namespace YouChatServer
                     // Display the received image (optional)
                     Console.WriteLine("Received an image from a client.");
                 }
+                //this is the code to use:
+                /*
+                IPEndPoint senderEndpoint = clientEndPoint;
+                int senderIndex;
+                int recieverIndex;
+                IPEndPoint recieveEndpoint;
+                int temp;
+                foreach (IPEndPoint[] iPEndPoints in videoCallMembersDetails)
+                {
+                    temp = Array.IndexOf(iPEndPoints, senderEndpoint);
+                    if (temp != -1)
+                    {
+                        senderIndex = temp;
+                        recieverIndex = 1 - senderIndex;
+                        recieveEndpoint = iPEndPoints[recieverIndex];
+                        VideoUdpClient.Send(imageData, imageData.Length, recieveEndpoint);
+
+                        break;
+                    }
+                }
+                */
+                //if (senderIndex >= 0)
+                //{
+                //    // Forward the frame to the other client(s)
+                //    for (int i = 0; i < clientEndpoints.Count; i++)
+                //    {
+                //        if (i != senderIndex)
+                //        {
+                //            // Forward the frame to the other clients
+                //            udpListener.Send(receivedFrame, receivedFrame.Length, clientEndpoints[i]);
+                //        }
+                //    }
+                //}
+                //IPEndPoint iPEndPoint;
+
+                //foreach (IPEndPoint[] iPEndPoints in videoCallMembersDetails)
+                //{
+                //    if (iPEndPoints[0] == (clientEndPoint))
+                //    {
+                //        iPEndPoint = iPEndPoints[1];
+                //    }
+                //    else if (iPEndPoints[1] == (clientEndPoint))
+                //    {
+                //        iPEndPoint = iPEndPoints[0];
+                //    }
+                //}
+                //VideoUdpClient.Send(imageData, imageData.Length, iPEndPoint);
 
                 // Send the image back to the same client
                 VideoUdpClient.Send(imageData, imageData.Length, clientEndPoint);

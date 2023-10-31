@@ -101,6 +101,10 @@ namespace YouChatServer.UserDetails
                 string Sql2 = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES('" + Username + "','" + Md5Password + "')";
                 string Sql3 = "INSERT INTO Friends (Username) VALUES('" + Username + "')";
 
+                //will be used for UserVerificationInformation
+                //todo - to insert the answers encrypted by MD5
+                string Sql4 = "INSERT INTO UserVerificationInformation (Username, TagLineId, [Question-1], [Answer-1], [Question-2], [Answer-2], [Question-3], [Answer-3], [Question-4], [Answer-4], [Question-5], [Answer-5]) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + TagLine + "')";
+
                 connection.Open();
                 cmd.CommandText = Sql1;
                 int x = cmd.ExecuteNonQuery();

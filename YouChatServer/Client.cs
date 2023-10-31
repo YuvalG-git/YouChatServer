@@ -695,6 +695,12 @@ namespace YouChatServer
                                 Unicast(VideoCallResponseReciever, VideoCallResponseResult1, friendName);
                                 //needs to create the udp connection...
 
+                                //to do something like that:
+                                //Guid callId = Guid.NewGuid(); // Generate a unique identifier for the call
+                                //VideoCallMembers call = new VideoCallMembers(_clientIP,_clientAddress);
+
+                                //Program.VideoCalls[callId] = call;
+
                             }
                             else //the call wont happen...
                             {
