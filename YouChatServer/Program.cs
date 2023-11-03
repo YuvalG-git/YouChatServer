@@ -81,7 +81,13 @@ namespace YouChatServer
         }
         static private void ReceiveAudioUdpMessage(IAsyncResult ar)
         {
+            while (true)
+            {
+                IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
+                byte[] imageData = AudioUdpClient.Receive(ref clientEndPoint);
+                AudioUdpClient.Send(imageData, imageData.Length, clientEndPoint);
+            }
         }
         /// <summary>
         /// UDP listen to screen/camera share from client
