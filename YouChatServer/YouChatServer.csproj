@@ -74,7 +74,7 @@
     <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\MD5.cs" />
     <Compile Include="Encryption\RSAServiceProvider.cs" />
-    <Compile Include="Log\Logger.cs" />
+    <Compile Include="Logger\Logger.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -140,6 +140,8 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Log\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
