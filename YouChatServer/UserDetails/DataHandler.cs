@@ -27,8 +27,6 @@ namespace YouChatServer.UserDetails
     /// </summary>
     internal static class DataHandler
     {
-
-
         static string projectFolderPath = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
         static string connectionString;
 

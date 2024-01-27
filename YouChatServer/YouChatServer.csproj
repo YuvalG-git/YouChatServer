@@ -85,6 +85,7 @@
     </Compile>
     <Compile Include="RandomStringCreator.cs" />
     <Compile Include="SmtpHandler.cs" />
+    <Compile Include="UserDetails\DataCreator.cs" />
     <Compile Include="UserDetails\DataHandler.cs" />
     <Compile Include="VideoCallMembers.cs" />
     <Compile Include="XmlDataHandler.cs" />
