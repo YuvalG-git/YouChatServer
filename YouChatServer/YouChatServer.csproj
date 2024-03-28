@@ -74,6 +74,8 @@
     <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\MD5.cs" />
     <Compile Include="Encryption\RSAServiceProvider.cs" />
+    <Compile Include="JsonClasses\PersonalVerificationAnswers.cs" />
+    <Compile Include="JsonClasses\RegistrationInformation.cs" />
     <Compile Include="Logger\Logger.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="Program.cs" />
@@ -89,6 +91,7 @@
     <Compile Include="UserDetails\DataHandler.cs" />
     <Compile Include="VideoCallMembers.cs" />
     <Compile Include="XmlDataHandler.cs" />
+    <Compile Include="XmlFileManager.cs" />
     <EmbeddedResource Include="Properties\CaptchaBackground.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>CaptchaBackground.Designer.cs</LastGenOutput>

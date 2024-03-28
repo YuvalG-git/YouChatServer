@@ -44,6 +44,7 @@ namespace YouChatServer
         static void Main(string[] args)
         {
             Logger.LogInfo("Application started.");
+            //UserDetails.DataCreator.CreateDataBase();
             System.Net.IPAddress localAdd = System.Net.IPAddress.Parse(ipAddress);
             TcpListener listener = new TcpListener(localAdd, portNo);
             Console.WriteLine("Simple TCP Server");

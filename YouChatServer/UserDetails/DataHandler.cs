@@ -19,6 +19,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Runtime.Remoting.Messaging;
 using YouChatServer.ChatHandler;
 using static System.Net.Mime.MediaTypeNames;
+using YouChatServer.JsonClasses;
 
 namespace YouChatServer.UserDetails
 {
@@ -101,7 +102,23 @@ namespace YouChatServer.UserDetails
 
                 //will be used for UserVerificationInformation
                 //todo - to insert the answers encrypted by MD5
-                string Sql4 = "INSERT INTO UserVerificationInformation (Username, TagLineId, [Question-1], [Answer-1], [Question-2], [Answer-2], [Question-3], [Answer-3], [Question-4], [Answer-4], [Question-5], [Answer-5]) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + TagLine + "')";
+                string questionNumber1 ="";
+                string questionNumber2 = ""; 
+                string questionNumber3 = ""; 
+                string questionNumber4 = ""; 
+                string questionNumber5 = ""; 
+                string answerNumber1 = ""; 
+                string answerNumber2 = ""; 
+                string answerNumber3 = ""; 
+                string answerNumber4 = ""; 
+                string answerNumber5 = ""; 
+                string Md5AnswerNumber1 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber1);
+                string Md5AnswerNumber2 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber2);
+                string Md5AnswerNumber3 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber3);
+                string Md5AnswerNumber4 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber4);
+                string Md5AnswerNumber5 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber5);
+
+                string Sql4 = "INSERT INTO UserVerificationInformation (Username, TagLineId, [Question-1], [Answer-1], [Question-2], [Answer-2], [Question-3], [Answer-3], [Question-4], [Answer-4], [Question-5], [Answer-5]) VALUES('" + Username + "','" + TagLine + "','" + questionNumber1 + "','" + Md5AnswerNumber1 + "','" + questionNumber2 + "','" + Md5AnswerNumber2 + "','" + questionNumber3 + "','" + Md5AnswerNumber3 + "','" + questionNumber4 + "','" + Md5AnswerNumber4 + "','" + questionNumber5 + "','" + Md5AnswerNumber5 + "')";
 
                 connection.Open();
                 cmd.CommandText = Sql1;
@@ -122,6 +139,96 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+        }
+
+        public static string[] GetUserVerificationQuestions(string Username)
+        {
+            string[] questions = new string[5];
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT [Question-1], [Question-2], [Question-3], [Question-4], [Question-5] FROM UserVerificationInformation WHERE Username = '" + Username + "'";
+                cmd.CommandText = sql;
+                connection.Open();
+
+                SqlDataReader Reader = cmd.ExecuteReader();
+                if (Reader.Read())
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        int questionNumber = i + 1;
+                        string question = Reader["Question-" + questionNumber.ToString()] as string;
+                        if (!string.IsNullOrEmpty(question))
+                        {
+                            questions[i] = question;
+                        }
+                    }
+                }
+                Reader.Close();
+                connection.Close();
+                return questions;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return questions;
+            }
+        }
+        public static bool CheckUserVerificationInformation(string Username, PersonalVerificationAnswers personalVerificationAnswers)
+        {
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT * FROM UserVerificationInformation WHERE Username = '" + Username + "'";
+                cmd.CommandText = sql;
+                connection.Open();
+                int matchingQuestionCounter = 0;
+                SqlDataReader Reader = cmd.ExecuteReader();
+                if (Reader.Read())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        string storedQuestion = Reader["Question-" + i.ToString()] as string;
+                        string storedAnswer = Reader["Answer-" + i.ToString()] as string;
+                        if (storedQuestion.Equals(personalVerificationAnswers.QuestionNumber1))
+                        {
+                            matchingQuestionCounter++;
+                            if (!storedAnswer.Equals(personalVerificationAnswers.AnswerNumber1))
+                            {
+                                return false;
+                            }
+                        }
+                        else if (storedQuestion.Equals(personalVerificationAnswers.QuestionNumber2))
+                        {
+                            matchingQuestionCounter++;
+                            if (!storedAnswer.Equals(personalVerificationAnswers.AnswerNumber2))
+                            {
+                                return false;
+                            }
+                        }
+                        else if (storedQuestion.Equals(personalVerificationAnswers.QuestionNumber3))
+                        {
+                            matchingQuestionCounter++;
+                            if (!storedAnswer.Equals(personalVerificationAnswers.AnswerNumber3))
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+                if (matchingQuestionCounter != 3)
+                    return false;
+                Reader.Close();
+                connection.Close();
+                return true; // All questions and answers matched
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return false;
             }
         }
         private static string SetTagLine(string DataBaseTableName)

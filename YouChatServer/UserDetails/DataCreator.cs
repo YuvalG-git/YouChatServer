@@ -37,11 +37,11 @@ namespace YouChatServer.UserDetails
 
         private static string SqlRelativePath()
         {
-            projectFolderPath = projectFolderPath.Substring(0, projectFolderPath.Length - @"bin\Debug".Length) + "UserDetails2\\UserDetails2.mdf";
+            projectFolderPath = projectFolderPath.Substring(0, projectFolderPath.Length - @"bin\Debug".Length) + "UserDetails\\UserDetails2.mdf";
             connectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=""" + projectFolderPath + @""";Integrated Security=True";
             return connectionString;
         }
-        static void CreateDataBase()
+        public static void CreateDataBase()
         {
 
             // Specify the database name
@@ -69,9 +69,10 @@ namespace YouChatServer.UserDetails
                 connection.ChangeDatabase(databaseName);
 
                 // Create tables
-                CreatesTables(connection);
+                CreatesTables();
 
                 Console.WriteLine("Tables created successfully.");
+                connection.Close();
             }
         }
 
@@ -101,7 +102,7 @@ namespace YouChatServer.UserDetails
         //        command.ExecuteNonQuery();
         //    }
         //}
-        private static void CreatesTables(SqlConnection connection)
+        public static void CreatesTables()
         {
             CreateTable_Chats(connection);
             CreateTable_FriendRequest(connection);
@@ -128,7 +129,8 @@ namespace YouChatServer.UserDetails
             {
                     command.ExecuteNonQuery();
                     Console.WriteLine("Table created successfully.");
-            }  
+            }
+
         }
         private static void CreateTable_FriendRequest(SqlConnection connection)
         {

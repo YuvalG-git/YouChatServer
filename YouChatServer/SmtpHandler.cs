@@ -11,6 +11,8 @@ namespace YouChatApp
 {
     internal class SmtpHandler
     {
+
+        //to send a email on friend request and more...
         const int RegistrationMessage = 1;
         const int LoginMessage = 2;
         const int PasswordRenewalMessage = 3;
