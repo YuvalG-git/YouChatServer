@@ -93,12 +93,39 @@ namespace YouChatServer.UserDetails
                 //}
                 string TagLine = SetTagLine("UserDetails");
                 cmd.Connection = connection;
+                connection.Open();
                 //string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, ProfilePicture, ProfileStatus) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + null + "','" + null + "')";
-                string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, TagLineId) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + TagLine + "')";
+                //string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, TagLineId) VALUES('" + Username + "','" + Md5Password + "','" + FirstName + "','" + LastName + "','" + EmailAddress + "','" + City + "','" + DateInCurrectOrder + "','" + Gender + "','" + LastPasswordUpdate + "','" + TagLine + "')";
+                string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, TagLineId) VALUES(@Username, @Md5Password, @FirstName, @LastName, @EmailAddress, @City, @BirthDate, @Gender, @LastPasswordUpdate, @TagLine)";
+                cmd.CommandText = Sql1;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@Md5Password", Md5Password);
+                cmd.Parameters.AddWithValue("@FirstName", FirstName);
+                cmd.Parameters.AddWithValue("@LastName", LastName);
+                cmd.Parameters.AddWithValue("@EmailAddress", EmailAddress);
+                cmd.Parameters.AddWithValue("@City", City);
+                cmd.Parameters.AddWithValue("@BirthDate", DateInCurrectOrder);
+                cmd.Parameters.AddWithValue("@Gender", Gender);
+                cmd.Parameters.AddWithValue("@LastPasswordUpdate", LastPasswordUpdate);
+                cmd.Parameters.AddWithValue("@TagLine", TagLine);
+                int x = cmd.ExecuteNonQuery();
 
                 //string Sql2 = CreateSqlCommandTextForUserPastPasswordsInserting(Username, Md5Password);
-                string Sql2 = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES('" + Username + "','" + Md5Password + "')";
-                string Sql3 = "INSERT INTO Friends (Username) VALUES('" + Username + "')";
+                //string Sql2 = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES('" + Username + "','" + Md5Password + "')";
+                string Sql2 = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES(@Username, @Md5Password)";
+                cmd.CommandText = Sql2;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@Md5Password", Md5Password);
+                int y = cmd.ExecuteNonQuery();
+
+
+                //string Sql3 = "INSERT INTO Friends (Username) VALUES('" + Username + "')";
+                string Sql3 = "INSERT INTO Friends (Username) VALUES(@Username)";
+                cmd.CommandText = Sql3;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@Username", Username);
+                int z = cmd.ExecuteNonQuery();
 
                 //will be used for UserVerificationInformation
                 //todo - to insert the answers encrypted by MD5
@@ -118,17 +145,26 @@ namespace YouChatServer.UserDetails
                 string Md5AnswerNumber4 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber4);
                 string Md5AnswerNumber5 = YouChatServer.Encryption.MD5.CreateMD5Hash(answerNumber5);
 
-                string Sql4 = "INSERT INTO UserVerificationInformation (Username, TagLineId, [Question-1], [Answer-1], [Question-2], [Answer-2], [Question-3], [Answer-3], [Question-4], [Answer-4], [Question-5], [Answer-5]) VALUES('" + Username + "','" + TagLine + "','" + questionNumber1 + "','" + Md5AnswerNumber1 + "','" + questionNumber2 + "','" + Md5AnswerNumber2 + "','" + questionNumber3 + "','" + Md5AnswerNumber3 + "','" + questionNumber4 + "','" + Md5AnswerNumber4 + "','" + questionNumber5 + "','" + Md5AnswerNumber5 + "')";
+                //string Sql4 = "INSERT INTO UserVerificationInformation (Username, TagLineId, [Question-1], [Answer-1], [Question-2], [Answer-2], [Question-3], [Answer-3], [Question-4], [Answer-4], [Question-5], [Answer-5]) VALUES('" + Username + "','" + TagLine + "','" + questionNumber1 + "','" + Md5AnswerNumber1 + "','" + questionNumber2 + "','" + Md5AnswerNumber2 + "','" + questionNumber3 + "','" + Md5AnswerNumber3 + "','" + questionNumber4 + "','" + Md5AnswerNumber4 + "','" + questionNumber5 + "','" + Md5AnswerNumber5 + "')";
+                string Sql4 = "INSERT INTO UserVerificationInformation (Username, TagLineId, [Question-1], [Answer-1], [Question-2], [Answer-2], [Question-3], [Answer-3], [Question-4], [Answer-4], [Question-5], [Answer-5]) VALUES(@Username, @TagLine, @questionNumber1, @Md5AnswerNumber1, @questionNumber2, @Md5AnswerNumber2, @questionNumber3, @Md5AnswerNumber3, @questionNumber4, @Md5AnswerNumber4, @questionNumber5, @Md5AnswerNumber5)";
+                cmd.CommandText = Sql4;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@TagLine", TagLine);
+                cmd.Parameters.AddWithValue("@questionNumber1", questionNumber1);
+                cmd.Parameters.AddWithValue("@Md5AnswerNumber1", Md5AnswerNumber1);
+                cmd.Parameters.AddWithValue("@questionNumber2", questionNumber2);
+                cmd.Parameters.AddWithValue("@Md5AnswerNumber2", Md5AnswerNumber2);
+                cmd.Parameters.AddWithValue("@questionNumber3", questionNumber3);
+                cmd.Parameters.AddWithValue("@Md5AnswerNumber3", Md5AnswerNumber3);
+                cmd.Parameters.AddWithValue("@questionNumber4", questionNumber4);
+                cmd.Parameters.AddWithValue("@Md5AnswerNumber4", Md5AnswerNumber4);
+                cmd.Parameters.AddWithValue("@questionNumber5", questionNumber5);
+                cmd.Parameters.AddWithValue("@Md5AnswerNumber5", Md5AnswerNumber5);
+                int w = cmd.ExecuteNonQuery();
 
-                connection.Open();
-                cmd.CommandText = Sql1;
-                int x = cmd.ExecuteNonQuery();
-                cmd.CommandText = Sql2;
-                int y = cmd.ExecuteNonQuery();
-                cmd.CommandText = Sql3;
-                int z = cmd.ExecuteNonQuery();
                 connection.Close();
-                if ((x > 0) && (y > 0) && (z > 0))
+                if ((x > 0) && (y > 0) && (z > 0) && (w > 0))
                 {
                     return x;
                 }
@@ -148,8 +184,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT [Question-1], [Question-2], [Question-3], [Question-4], [Question-5] FROM UserVerificationInformation WHERE Username = '" + Username + "'";
+                //string sql = "SELECT [Question-1], [Question-2], [Question-3], [Question-4], [Question-5] FROM UserVerificationInformation WHERE Username = '" + Username + "'";
+                string sql = "SELECT [Question-1], [Question-2], [Question-3], [Question-4], [Question-5] FROM UserVerificationInformation WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
 
                 SqlDataReader Reader = cmd.ExecuteReader();
@@ -181,10 +219,17 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM UserVerificationInformation WHERE Username = '" + Username + "'";
+                //string sql = "SELECT * FROM UserVerificationInformation WHERE Username = '" + Username + "'";
+                string sql = "SELECT * FROM UserVerificationInformation WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 int matchingQuestionCounter = 0;
+                string Md5AnswerNumber1 = YouChatServer.Encryption.MD5.CreateMD5Hash(personalVerificationAnswers.AnswerNumber1);
+                string Md5AnswerNumber2 = YouChatServer.Encryption.MD5.CreateMD5Hash(personalVerificationAnswers.AnswerNumber2);
+                string Md5AnswerNumber3 = YouChatServer.Encryption.MD5.CreateMD5Hash(personalVerificationAnswers.AnswerNumber3);
+
+
                 SqlDataReader Reader = cmd.ExecuteReader();
                 if (Reader.Read())
                 {
@@ -195,7 +240,7 @@ namespace YouChatServer.UserDetails
                         if (storedQuestion.Equals(personalVerificationAnswers.QuestionNumber1))
                         {
                             matchingQuestionCounter++;
-                            if (!storedAnswer.Equals(personalVerificationAnswers.AnswerNumber1))
+                            if (!storedAnswer.Equals(Md5AnswerNumber1))
                             {
                                 return false;
                             }
@@ -203,7 +248,7 @@ namespace YouChatServer.UserDetails
                         else if (storedQuestion.Equals(personalVerificationAnswers.QuestionNumber2))
                         {
                             matchingQuestionCounter++;
-                            if (!storedAnswer.Equals(personalVerificationAnswers.AnswerNumber2))
+                            if (!storedAnswer.Equals(Md5AnswerNumber2))
                             {
                                 return false;
                             }
@@ -211,7 +256,7 @@ namespace YouChatServer.UserDetails
                         else if (storedQuestion.Equals(personalVerificationAnswers.QuestionNumber3))
                         {
                             matchingQuestionCounter++;
-                            if (!storedAnswer.Equals(personalVerificationAnswers.AnswerNumber3))
+                            if (!storedAnswer.Equals(Md5AnswerNumber3))
                             {
                                 return false;
                             }
@@ -251,8 +296,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "UPDATE UserDetails SET Online = '" + 1 + "' WHERE Username = '" + username + "'";
+                //string sql = "UPDATE UserDetails SET Online = '" + 1 + "' WHERE Username = '" + username + "'";
+                string sql = "UPDATE UserDetails SET Online = @OnlineValue WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@OnlineValue", 1);
+                cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
@@ -272,8 +320,12 @@ namespace YouChatServer.UserDetails
             {
                 DateTime LastSeenTime = DateTime.Now;
                 cmd.Connection = connection;
-                string sql = "UPDATE UserDetails SET Online = '" + 0 + "', LastSeenTime = '" + LastSeenTime + "' WHERE Username = '" + username + "'";
+                //string sql = "UPDATE UserDetails SET Online = '" + 0 + "', LastSeenTime = '" + LastSeenTime + "' WHERE Username = '" + username + "'";
+                string sql = "UPDATE UserDetails SET Online = @OnlineValue, LastSeenTime = @LastSeenTime WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@OnlineValue", 0);
+                cmd.Parameters.AddWithValue("@LastSeenTime", LastSeenTime);
+                cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
@@ -294,10 +346,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string Sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + TableName + "'";
-
-
-                cmd.CommandText = Sql;
+                //string Sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '" + TableName + "'";
+                string sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@TableName", TableName);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -372,8 +424,11 @@ namespace YouChatServer.UserDetails
                 string Md5Password = Encryption.MD5.CreateMD5Hash(Password);
 
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And Password = '" + Md5Password + "'";
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And Password = '" + Md5Password + "'";
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username AND Password = @Md5Password";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@Md5Password", Md5Password);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -398,8 +453,11 @@ namespace YouChatServer.UserDetails
                 string Username = data[0];
                 string Email = data[1];
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And EmailAddress = '" + Email + "'";
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And EmailAddress = '" + Email + "'";
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username AND EmailAddress = @Email";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@Email", Email);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -420,11 +478,14 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string Sql = "INSERT INTO FriendRequest (SenderUsername, ReceiverUsername) VALUES('" + FriendRequestSenderUsername + "','" + FriendRequestReceiverUsername + "')";
+                //string Sql = "INSERT INTO FriendRequest (SenderUsername, ReceiverUsername) VALUES('" + FriendRequestSenderUsername + "','" + FriendRequestReceiverUsername + "')";
+                string sql = "INSERT INTO FriendRequest (SenderUsername, ReceiverUsername) VALUES (@SenderUsername, @ReceiverUsername)";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@SenderUsername", FriendRequestSenderUsername);
+                cmd.Parameters.AddWithValue("@ReceiverUsername", FriendRequestReceiverUsername);
 
 
                 connection.Open();
-                cmd.CommandText = Sql;
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
                 return x;
@@ -476,9 +537,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
+                //string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
+                string sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = @Username AND RequestStatus = 'Pending'";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
-                cmd.CommandText = Sql;
                 SqlDataReader Reader = cmd.ExecuteReader();
                 DateTime requestDate = DateTime.Now;
                 while (Reader.Read())
@@ -509,13 +572,17 @@ namespace YouChatServer.UserDetails
                 return Usernames;
             }
         }
-        public static int HandleFriendRequestStatus(string SenderUsername, string ReceiverUserame, string FriendRequestStatus)
+        public static int HandleFriendRequestStatus(string SenderUsername, string ReceiverUsername, string FriendRequestStatus)
         {
             try
             {
                 cmd.Connection = connection;
-                string sql = "UPDATE FriendRequest SET RequestStatus = '" + FriendRequestStatus + "' WHERE SenderUsername = '" + SenderUsername + "' And ReceiverUserame = '" + ReceiverUserame + "'";
+                //string sql = "UPDATE FriendRequest SET RequestStatus = '" + FriendRequestStatus + "' WHERE SenderUsername = '" + SenderUsername + "' And ReceiverUserame = '" + ReceiverUserame + "'";
+                string sql = "UPDATE FriendRequest SET RequestStatus = @FriendRequestStatus WHERE SenderUsername = @SenderUsername AND ReceiverUserame = @ReceiverUsername";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@FriendRequestStatus", FriendRequestStatus);
+                cmd.Parameters.AddWithValue("@SenderUsername", SenderUsername);
+                cmd.Parameters.AddWithValue("@ReceiverUsername", ReceiverUsername);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
@@ -536,9 +603,11 @@ namespace YouChatServer.UserDetails
             {
                 string FriendColumn = GetFriendColumnToInsert(UsernameAdding);
                 cmd.Connection = connection;
-                string sql = "UPDATE Friends SET [" + FriendColumn + "] = '" + UsernameAdded + "' WHERE Username = '" + UsernameAdding + "'";
-
+                //string sql = "UPDATE Friends SET [" + FriendColumn + "] = '" + UsernameAdded + "' WHERE Username = '" + UsernameAdding + "'";
+                string sql = "UPDATE Friends SET [" + FriendColumn + "] = @UsernameAdded WHERE Username = @UsernameAdding";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@UsernameAdded", UsernameAdded);
+                cmd.Parameters.AddWithValue("@UsernameAdding", UsernameAdding);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
 
@@ -558,9 +627,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM Friends WHERE Username = '" + Username + "'";
-
+                //string sql = "SELECT * FROM Friends WHERE Username = '" + Username + "'";
+                string sql = "SELECT * FROM Friends WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 string columnName = "";
@@ -597,9 +667,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string Sql = "SELECT * FROM Friends WHERE Username = '" + username + "'";
+                //string Sql = "SELECT * FROM Friends WHERE Username = '" + username + "'";
+                string sql = "SELECT * FROM Friends WHERE Username = @Username";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
-                cmd.CommandText = Sql;
                 SqlDataReader Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
@@ -727,11 +799,13 @@ namespace YouChatServer.UserDetails
                 bool OnlineProperty = true;
                 bool ProfilePictureProperty = true;
                 bool StatusProperty = true;
-                string Sql = "SELECT ProfilePicture, ProfileStatus, LastSeenTime, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty FROM UserDetails WHERE Username = '" + FriendName + "'";
                 cmd.Connection = connection;
 
+                //string Sql = "SELECT ProfilePicture, ProfileStatus, LastSeenTime, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty FROM UserDetails WHERE Username = '" + FriendName + "'";
+                string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenTime, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty FROM UserDetails WHERE Username = @FriendName";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@FriendName", FriendName);
                 connection.Open();
-                cmd.CommandText = Sql;
                 SqlDataReader Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
@@ -775,8 +849,11 @@ namespace YouChatServer.UserDetails
                 string Username = data[0];
                 string TagLine = data[1];
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And TagLineId = '" + TagLine + "'";
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And TagLineId = '" + TagLine + "'";
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username AND TagLineId = @TagLine";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@TagLine", TagLine);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -807,8 +884,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + username + "'";
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + username + "'";
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -830,8 +909,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM " + DataBaseTableName + " WHERE TaglineId = '" + Tagline + "'";
+                //string sql = "SELECT COUNT(*) FROM " + DataBaseTableName + " WHERE TaglineId = '" + Tagline + "'";
+                string sql = "SELECT COUNT(*) FROM " + DataBaseTableName + " WHERE TaglineId = @Tagline";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Tagline", Tagline);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -861,8 +942,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE EmailAddress = '" + emailAddress + "'";
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE EmailAddress = '" + emailAddress + "'";
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE EmailAddress = @EmailAddress";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@EmailAddress", emailAddress);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -884,8 +967,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And (ProfilePicture IS NOT NULL OR ProfilePicture !=  '" + DBNull.Value + "')";
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And (ProfilePicture IS NOT NULL OR ProfilePicture !=  '" + DBNull.Value + "')";
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username AND (ProfilePicture IS NOT NULL OR ProfilePicture != @DBNullValue)";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@DBNullValue", DBNull.Value);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -906,8 +992,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "UPDATE UserDetails SET ProfilePicture = '" + ProfilePictureID + "' WHERE Username = '" + Username + "'";
+                //string sql = "UPDATE UserDetails SET ProfilePicture = '" + ProfilePictureID + "' WHERE Username = '" + Username + "'";
+                string sql = "UPDATE UserDetails SET ProfilePicture = @ProfilePictureID WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@ProfilePictureID", ProfilePictureID);
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
@@ -925,8 +1014,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "UPDATE UserDetails SET ProfileStatus = '" + Status + "' WHERE Username = '" + Username + "'";
+                //string sql = "UPDATE UserDetails SET ProfileStatus = '" + Status + "' WHERE Username = '" + Username + "'";
+                string sql = "UPDATE UserDetails SET ProfileStatus = @Status WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Status", Status);
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
@@ -945,8 +1037,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And (ProfileStatus IS NOT NULL OR ProfileStatus !=  '" + DBNull.Value + "')"; //returns the oppsite for some reason
+                //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And (ProfileStatus IS NOT NULL OR ProfileStatus !=  '" + DBNull.Value + "')"; //returns the oppsite for some reason
+                string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username AND (ProfileStatus IS NOT NULL OR ProfileStatus != @DBNullValue)";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@DBNullValue", DBNull.Value);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -967,8 +1062,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT LastPasswordUpdate FROM UserDetails WHERE Username = '" + Username + "'";
+                //string sql = "SELECT LastPasswordUpdate FROM UserDetails WHERE Username = '" + Username + "'";
+                string sql = "SELECT LastPasswordUpdate FROM UserDetails WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
 
                 object result = cmd.ExecuteScalar();
@@ -980,7 +1077,6 @@ namespace YouChatServer.UserDetails
                 }
                 connection.Close();
                 return LastPasswordUpdateDate;
-
             }
             catch (Exception ex)
             {
@@ -995,8 +1091,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT EmailAddress FROM UserDetails WHERE Username = '" + Username + "'";
+                //string sql = "SELECT EmailAddress FROM UserDetails WHERE Username = '" + Username + "'";
+                string sql = "SELECT EmailAddress FROM UserDetails WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
 
                 object result = cmd.ExecuteScalar();
@@ -1022,8 +1120,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT ProfilePicture FROM UserDetails WHERE Username = '" + Username + "'";
+                //string sql = "SELECT ProfilePicture FROM UserDetails WHERE Username = '" + Username + "'";
+                string sql = "SELECT ProfilePicture FROM UserDetails WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
 
                 object result = cmd.ExecuteScalar();
@@ -1047,8 +1147,10 @@ namespace YouChatServer.UserDetails
         public static string GetUserProfileSettings(string Username)
         {
             cmd.Connection = connection;
-            string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId FROM UserDetails WHERE Username = '" + Username + "'";
+            //string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId FROM UserDetails WHERE Username = '" + Username + "'";
+            string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId FROM UserDetails WHERE Username = @Username";
             cmd.CommandText = sql;
+            cmd.Parameters.AddWithValue("@Username", Username);
             connection.Open();
             string ProfilePicture = "";
             string ProfileStatus = "";
@@ -1092,13 +1194,20 @@ namespace YouChatServer.UserDetails
                 string PasswordRenewalDate = DateTime.Today.ToString("yyyy-MM-dd"); //todo - to decide if the user sends this or to keep it like that...
                 string PasswordColumn = GetPasswordColumnToInsert(Username);
                 cmd.Connection = connection;
-                string sql1 = "UPDATE UserDetails SET Password = '" + Md5Password + "', LastPasswordUpdate = '" + PasswordRenewalDate + "' WHERE Username = '" + Username + "'";
-                string sql2 = "UPDATE UserPastPasswords SET [" + PasswordColumn + "] = '" + Md5Password + "' WHERE Username = '" + Username + "'";
+                //string sql1 = "UPDATE UserDetails SET Password = '" + Md5Password + "', LastPasswordUpdate = '" + PasswordRenewalDate + "' WHERE Username = '" + Username + "'";
+                //string sql2 = "UPDATE UserPastPasswords SET [" + PasswordColumn + "] = '" + Md5Password + "' WHERE Username = '" + Username + "'";
+                string sql1 = "UPDATE UserDetails SET Password = @Md5Password, LastPasswordUpdate = @PasswordRenewalDate WHERE Username = @Username";
+                string sql2 = "UPDATE UserPastPasswords SET [" + PasswordColumn + "] = @Md5Password WHERE Username = @Username";
 
                 cmd.CommandText = sql1;
+                cmd.Parameters.AddWithValue("@Md5Password", Md5Password);
+                cmd.Parameters.AddWithValue("@PasswordRenewalDate", PasswordRenewalDate);
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
+
                 int x = cmd.ExecuteNonQuery();
-                cmd.CommandText = sql2;
+
+                cmd.CommandText = sql2; //to check it really works...
                 int y = cmd.ExecuteNonQuery();
 
                 connection.Close();
@@ -1120,10 +1229,12 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
+                //string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
+                string sql = "SELECT * FROM UserPastPasswords WHERE Username = @Username";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 string Md5Password = YouChatServer.Encryption.MD5.CreateMD5Hash(Password);
 
-                cmd.CommandText = sql;
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 while (Reader.Read())
@@ -1157,9 +1268,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
+                //string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
 
+                string sql = "SELECT * FROM UserPastPasswords WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 string columnName = "";
@@ -1193,8 +1306,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
+                //string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
+                string sql = "SELECT * FROM UserPastPasswords WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 if (Reader.Read()) // Check if a row was found
@@ -1227,8 +1342,10 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM Friends WHERE Username = '" + Username + "'";
+                //string sql = "SELECT * FROM Friends WHERE Username = '" + Username + "'";
+                string sql = "SELECT * FROM Friends WHERE Username = @Username";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 if (Reader.Read()) // Check if a row was found
@@ -1256,14 +1373,16 @@ namespace YouChatServer.UserDetails
                 return false;
             }
         }
-        public static void AddColumnToUserPastPasswords() //after this i need to add the new password...
+        public static void AddColumnToUserPastPasswords() //after this i need to add the new password... //todo - improve duplicate code for add column
         {
             try
             {
                 cmd.Connection = connection;
                 string TableName = "UserPastPasswords";
-                string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                //string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                string sql = "SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName ORDER BY ORDINAL_POSITION DESC";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@TableName", TableName);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
 
@@ -1310,8 +1429,10 @@ namespace YouChatServer.UserDetails
             {
                 cmd.Connection = connection;
                 string TableName = "Friends";
-                string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                //string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                string sql = "SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName ORDER BY ORDINAL_POSITION DESC";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@TableName", TableName);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
 
@@ -1358,8 +1479,10 @@ namespace YouChatServer.UserDetails
             {
                 cmd.Connection = connection;
                 string TableName = "Chats";
-                string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                //string sql = $"SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}' ORDER BY ORDINAL_POSITION DESC";
+                string sql = "SELECT TOP 1 COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @TableName ORDER BY ORDINAL_POSITION DESC";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@TableName", TableName);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
 
@@ -1413,14 +1536,19 @@ namespace YouChatServer.UserDetails
                 {
                     ChatIcon = System.Drawing.Image.FromStream(ms);
                 }
-                string ChatTagLine = SetTagLine("UserDetails");
+                string ChatTagLine = SetTagLine("Chats"); //todo i don't think it should be Userdetails...
                 cmd.Connection = connection;
-                string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
+                //string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
+                string sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES(@ChatName, @ChatTagLine, @ChatIcon, @FirstChatMember)";
+                cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@ChatName", ChatName);
+                cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
+                cmd.Parameters.AddWithValue("@ChatIcon", ChatIcon);
+                cmd.Parameters.AddWithValue("@FirstChatMember", FirstChatMember);
 
                 //now i need to add the other members...
 
                 connection.Open();
-                cmd.CommandText = Sql;
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
                 bool isNeededToAddColumn = false;
@@ -1448,9 +1576,12 @@ namespace YouChatServer.UserDetails
             {
                 string ChatMemberColumn = GetChatMemberColumnToInsert(ChatName, ChatTagLine);
                 cmd.Connection = connection;
-                string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = '" + Username + "' WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
-
+                //string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = '" + Username + "' WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
+                string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = @Username WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@Username", Username);
+                cmd.Parameters.AddWithValue("@ChatName", ChatName);
+                cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
 
@@ -1469,9 +1600,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
-
+                //string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
+                string sql = "SELECT * FROM Chats WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@ChatName", ChatName);
+                cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 string columnName = "";
@@ -1505,8 +1638,11 @@ namespace YouChatServer.UserDetails
             try
             {
                 cmd.Connection = connection;
-                string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'"; ;
+                //string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'"; ;
+                string sql = "SELECT * FROM Chats WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
                 cmd.CommandText = sql;
+                cmd.Parameters.AddWithValue("@ChatName", ChatName);
+                cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
                 if (Reader.Read()) // Check if a row was found

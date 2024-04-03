@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using YouChatServer.UdpHandler;
 
 namespace YouChatServer
 {
@@ -31,7 +32,7 @@ namespace YouChatServer
         static UdpClient VideoUdpClient; //udp video/ screen share listener obje
         public static int maxConnectionsPerIP = 5; // Maximum connections allowed per IP
         public static Dictionary<string, int> connectionCounts = new Dictionary<string, int>();
-        public static List<IPEndPoint[]> videoCallMembersDetails = new List<IPEndPoint[]>();
+        public static List<IPEndPoint[]> videoCallMembersDetails = new List<IPEndPoint[]>(); //another soloution might be a dictonary storing as key an object contain name and ip and as value the object of the person you are in a call with...
         //public static Dictionary<Guid, VideoCallMembers> VideoCalls = new Dictionary<Guid, VideoCallMembers>();
 
         /// <summary>
@@ -50,10 +51,11 @@ namespace YouChatServer
             Console.WriteLine("Simple TCP Server");
             Console.WriteLine("Listening to ip {0} port: {1}", ipAddress, portNo);
             Console.WriteLine("Server is ready.");
-            AudioUdpClient = new UdpClient(11000);//udp listens to port 11000
+            //AudioUdpClient = new UdpClient(11000);//udp listens to port 11000
             VideoUdpClient = new UdpClient(12000);//udp listens to port 12000
             VideoUdpClient.BeginReceive(new AsyncCallback(ReceiveVideoUdpMessage), null);//starts async listen too screen/camera sharing.
-            AudioUdpClient.BeginReceive(new AsyncCallback(ReceiveAudioUdpMessage), null);
+            //AudioUdpClient.BeginReceive(new AsyncCallback(ReceiveAudioUdpMessage), null);
+            AudioUdpHandler.StartAudioUdpClient();
             //ReceiveAndEchoImageUDP();
             // Start listen to incoming connection requests
             listener.Start();

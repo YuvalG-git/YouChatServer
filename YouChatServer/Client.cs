@@ -36,7 +36,7 @@ namespace YouChatServer
         /// </summary>
         public static Hashtable AllClients = new Hashtable();
         //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
-        private Dictionary<IPAddress, ClientAttemptsState> _clientFailedAttempts = new Dictionary<IPAddress, ClientAttemptsState>();
+        private Dictionary<IPAddress, ClientAttemptsState> _clientFailedAttempts = new Dictionary<IPAddress, ClientAttemptsState>(); 
 
         public static List<Client> clientsList = new List<Client>();
 
@@ -250,17 +250,12 @@ namespace YouChatServer
                                           null);
         }
         
-    public static string RandomKey(int Length)
+        public static string RandomKey(int Length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string (Enumerable.Repeat(chars, Length).Select(s => s[Random.Next(s.Length)]).ToArray());
         }
-
-    /// <summary>
-    /// The ReceiveMessage method recieves and handles the incomming stream
-    /// </summary>
-    /// <param name="ar">IAsyncResult Interface</param>
-    public void ReceiveMessage(IAsyncResult ar)
+        public void ReceiveMessage(IAsyncResult ar)
         {
             int bytesRead;
             try
@@ -301,429 +296,13 @@ namespace YouChatServer
                     else
                     {
                         DecryptedMessageDetails = Encryption.Encryption.DecryptData(SymmetricKey, messageDetails);
-                        if (requestNumber == registerRequest)
+                        switch (requestNumber)
                         {
-                            string[] data = DecryptedMessageDetails.Split('#');
-                            if (!UserDetails.DataHandler.usernameIsExist(data[0]) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
-                            {
-                                if (UserDetails.DataHandler.InsertUser(DecryptedMessageDetails) > 0)
-                                {
-                                    _ClientNick = data[0];
-                                    SendMessage(registerResponse, registerResponse1);
-                                    //SendMessage(registerResponse + "$" + registerResponse1);
-
-                                }
-                                else//if regist not ok
-                                {
-                                    SendMessage(registerResponse, registerResponse2);
-                                    //SendMessage(registerResponse + "$" + registerResponse2);
-
-                                }
-                            }
-                            else//if regist not ok
-                            {
-                                SendMessage(registerResponse, registerResponse2);
-                                //SendMessage(registerResponse + "$" + registerResponse2);
-
-                            }
-                        }
-                        else if (requestNumber == loginRequest)
-                        {
-                            //string[] data = messageDetails.Split('#');
-                            string[] data = DecryptedMessageDetails.Split('#');
-
-                            //if ((UserDetails.DataHandler.isExist(messageDetails)) && (!UserIsConnected(data[0])))
-
-                            if ((UserDetails.DataHandler.isExist(DecryptedMessageDetails)) && (!UserIsConnected(data[0])))
-                            {
-                                _ClientNick = data[0];
-                                string emailAddress = UserDetails.DataHandler.GetEmailAddress(_ClientNick);
-                                if (emailAddress != "")
-                                {
-                                    SendMessage(loginResponse, emailAddress);
-                                    //SendMessage(loginResponse + "$" + emailAddress);
-
-                                }
-                                else
-                                {
-                                    //todo - send a message saying there was a problem
-                                }
-                            }
-                            else
-                            {
-                                ClientAttemptsState clientAttemptsState;
-                                if (!_clientFailedAttempts.ContainsKey(_clientAddress))
-                                {
-                                    clientAttemptsState = new ClientAttemptsState(this);
-                                    _clientFailedAttempts[_clientAddress] = clientAttemptsState;
-                                }
-                                else
-                                {
-                                    clientAttemptsState = _clientFailedAttempts[_clientAddress];
-                                }
-                                clientAttemptsState.HandleFailedAttempt();
-                                //if (_clientFailedAttempts.ContainsKey(_clientIP))
-                                //{
-                                //    _clientFailedAttempts[_clientIP]++;
-
-                                //}
-                                //else
-                                //{
-                                //    _clientFailedAttempts[_clientIP] = 1;
-
-                                //}
-                                //if (_clientFailedAttempts[_clientIP] > 5)
-                                //{
-                                //    //handle waiting..
-                                //    // todo - handle block of spamming user and maybe do the following act:
-                                //    //to send a message to the user saying his account got blocked for 10 minutes because someone tried to enter..
-                                //}
-                                SendMessage(loginResponse, loginResponse2);
-                                //SendMessage(loginResponse + "$" + loginResponse2);
-
-                            }
-                        }
-                        else if (requestNumber == sendMessageRequest)
-                        {
-                            string message = _ClientNick + "#" + DecryptedMessageDetails;
-                            Multicast(sendMessageResponse, message);
-                            //Broadcast(sendMessageResponse + "$" + message);
-
-                        }
-                        else if (requestNumber == ContactInformationRequest)
-                        {
-                            string ContactsInformation = "Dan" + "^" + "hi" + "^" + "07:50" + "^" + "Male3" + "#" + "Ben" + "^" + "how you doing" + "^" + "17:53" + "^" + "Female3 " + "#" + "Ron" + "^" + "YOO" + "^" + "03:43" + "^" + "Male4"; //בעתיד לקחת מידע מהdatabase
-                            SendMessage(ContactInformationResponse, ContactsInformation);
-                            //SendMessage(ContactInformationResponse + "$" + ContactsInformation);
-
-                        }
-                        else if ((requestNumber == UploadProfilePictureRequest))
-                        {
-                            if (UserDetails.DataHandler.InsertProfilePicture(_ClientNick, DecryptedMessageDetails) > 0)
-                            {
-                                SendMessage(UploadProfilePictureResponse, DecryptedMessageDetails);
-                                //SendMessage(UploadProfilePictureResponse + "$" + registerResponse1);
-
-                            }
-                        }
-                        else if ((requestNumber == UploadStatusRequest))
-                        {
-                            if (UserDetails.DataHandler.InsertStatus(_ClientNick, DecryptedMessageDetails) > 0)
-                            {
-                                SendMessage(UploadStatusResponse, DecryptedMessageDetails);
-                                //SendMessage(UploadStatusResponse + "$" + registerResponse1);
-
-                            }
-                        }
-                        else if (requestNumber == ResetPasswordRequest)
-                        {
-                            if (UserDetails.DataHandler.IsMatchingUsernameAndEmailAddressExist(DecryptedMessageDetails))
-                            {
-                                SendMessage(ResetPasswordResponse, ResetPasswordResponse1);
-                                //SendMessage(ResetPasswordResponse + "$" + ResetPasswordResponse1);
-
-                            }
-                            else
-                            {
-                                SendMessage(ResetPasswordResponse, ResetPasswordResponse2);
-                                //SendMessage(ResetPasswordResponse + "$" + ResetPasswordResponse2);
-
-                            }
-                        }
-                        else if ((requestNumber == PasswordRenewalMessageRequest) || (requestNumber == PasswordUpdateRequest))
-                        {
-                            bool IsPasswordRenewalMessageRequest = (requestNumber == PasswordRenewalMessageRequest);
-                            int identifierNumber; //maybe instead of handling both here i should write a method that get the idnumber and send the message accordinglly...
-                            bool HasAccessToChange = true;
-                            string[] data = DecryptedMessageDetails.Split('#');
-                            string username = data[0];
-                            string NewPassword = data[1];
-                            if (IsPasswordRenewalMessageRequest)
-                            {
-                                identifierNumber = PasswordRenewalMessageResponse;
-                            }
-                            else
-                            {
-                                identifierNumber = PasswordUpdateResponse;
-
-                            }
-                            if (!IsPasswordRenewalMessageRequest)
-                            {
-                                string OldPassword = data[2];
-                                if (!UserDetails.DataHandler.PasswordIsExist(username, OldPassword)) //means the password already been chosen once by the user...
-                                {
-                                    HasAccessToChange = false;
-                                    SendMessage(identifierNumber, PasswordMessageResponse4); //past password not matching..
-
-                                }
-                            }
-                            if (HasAccessToChange)
-                            {
-                                if (UserDetails.DataHandler.PasswordIsExist(username, NewPassword)) //means the password already been chosen once by the user...
-                                {
-                                    SendMessage(identifierNumber, PasswordMessageResponse1);
-
-                                }
-                                else
-                                {
-                                    if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
-                                    {
-                                        UserDetails.DataHandler.AddColumnToUserPastPasswords();
-                                    }
-                                    if (UserDetails.DataHandler.SetNewPassword(username, NewPassword) > 0)
-                                    {
-                                        SendMessage(identifierNumber, PasswordMessageResponse2);
-                                        //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
-                                    }
-                                    else
-                                    {
-                                        SendMessage(identifierNumber, PasswordMessageResponse3);
-                                        //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
-
-                                    }
-                                }
-                            }
-
-                        }
-                        else if (requestNumber == InitialProfileSettingsCheckRequest)
-                        {
-                            if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
-                            {
-                                SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse1);
-
-                            }
-                            else if (!UserDetails.DataHandler.ProfilePictureIsExist(_ClientNick)) //todo - change this - after doing the captcha i should ask the server for this information
-                            {
-                                SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse2);
-                                //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse4);
-
-                            }
-                            else if (!UserDetails.DataHandler.StatusIsExist(_ClientNick))
-                            {
-                                SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse3);
-                                //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse5);
-                            }
-                            else
-                            {
-                                SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse4);
-                                //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse1);
-                                if (UserDetails.DataHandler.SetUserOnline(_ClientNick) > 0)
-                                {
-                                    //was ok...
-                                }
-
-                            }
-                        }
-                        else if (requestNumber == UserDetailsRequest)
-                        {
-                            string UserInformation = UserDetails.DataHandler.GetUserProfileSettings(_ClientNick);
-                            SendMessage(UserDetailsResponse, UserInformation);
-                        }
-                        else if (requestNumber == FriendRequestSender) //todo - needs to check if the user already sent a friend request before..
-                        {
-                            string[] data = DecryptedMessageDetails.Split('#');
-                            string FriendRequestReceiverUsername = data[0];
-                            string FriendRequestSenderUsername = _ClientNick;
-
-                            if (FriendRequestSenderUsername != FriendRequestReceiverUsername)
-                            {
-                                if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(DecryptedMessageDetails))
-                                {
-                                    //ask friend request..
-                                    if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
-                                    {
-                                        //was successful
-                                        //to check if he is online...
-                                        if (UserIsConnected(FriendRequestReceiverUsername))
-                                        {
-                                            string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
-                                            if (profilePicture != "")
-                                            {
-                                                string userDetails = FriendRequestSenderUsername + "^" + profilePicture;
-                                                Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
-                                                                                                                            //need to handle when logging in if there were message request sent before...
-                                            }
-
-                                        }
-                                    }
-                                    else
-                                    {
-                                        //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
-                                    }
-
-                                }
-                            }
-
-                        }
-                        else if (requestNumber == FriendRequestResponseSender)
-                        {
-                            string[] data = DecryptedMessageDetails.Split('#'); //needs to string from the client the name of the user who sent and then the accept/deny...
-                            string FriendRequestSenderUsername = data[0];
-                            string FriendRequestReceiverUsername = _ClientNick;
-                            string FriendRequestStatus = data[1];
-                            if (UserDetails.DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
-                            {
-                                if (FriendRequestStatus == FriendRequestResponseSender1)
-                                {
-                                    if ((UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestSenderUsername)) || (UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestReceiverUsername)))
-                                    {
-                                        UserDetails.DataHandler.AddColumnToFriends();
-                                    }
-                                    if (UserDetails.DataHandler.AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0) //one worked...
-                                    {
-                                        if (UserDetails.DataHandler.AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername) > 0) //both worked...
-                                        {
-                                            Unicast(FriendRequestResponseReceiver, "the friend request has been accepted", FriendRequestSenderUsername);
-                                        }
-                                    }
-                                    //if (UserDetails.DataHandler.setne(username, password) > 0)
-                                    //{
-                                    //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse2);
-                                    //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
-                                    //}
-                                    //else
-                                    //{
-                                    //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse3);
-                                    //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
-
-                                    //}                                    //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
-                                }
-                                else if (FriendRequestStatus == FriendRequestResponseSender2)
-                                {
-                                    // doesn't really need to do something... maybe in the future i will think abt something
-                                }
-                            }
-                            else
-                            {
-                                //was an error...
-                            }
-
-                        }
-                        else if (requestNumber == FriendsProfileDetailsRequest)
-                        {
-                            //string FriendsName = UserDetails.DataHandler.GetFriendList(_ClientNick);
-                            //Dictionary<string, string> FriendsProfileDetailsDictionary = UserDetails.DataHandler.GetFriendsProfileInformation(FriendsName);
-                            ////here i check the need for split messages...
-                            //List<string> FriendsProfileDetails = new List<string>();
-                            //int AllFriendProfileDetailsLength = 0;
-                            //string FriendProfileDetails = "";
-                            //int index = 0;
-                            //foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
-                            //{
-                            //    FriendProfileDetails = "#" + kvp.Value;
-                            //    byte[] currentUserDetailsBytes = Encoding.UTF8.GetBytes(FriendProfileDetails);
-
-                            //    if (currentUserDetailsBytes.Length + AllFriendProfileDetailsLength + 4> 1500)      //needs to check if adding the content of the profiledetails will be two much length
-                            //    {
-                            //        index += 1;
-                            //        AllFriendProfileDetailsLength = 0;
-                            //    }
-                            //    FriendsProfileDetails[index] += FriendProfileDetails;
-                            //    AllFriendProfileDetailsLength += currentUserDetailsBytes.Length;
-                            //}
-                            //foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
-                            //{
-                            //    SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet.Remove(0, 1)); //maybe i should split to couple of messages...
-                            //}
-                        }
-                        else if (requestNumber == disconnectRequest)
-                        {
-                            if (_ClientNick != null)
-                            {
-                                if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
-                                {
-                                    //was ok...
-                                }
-                            }
-                        }
-                        else if (requestNumber == PastFriendRequestsRequest)
-                        {
-                            string FriendRequestNamesOfSendersAndRequestDates = UserDetails.DataHandler.CheckFriendRequests(_ClientNick);
-                            string[] FriendRequestDetails = FriendRequestNamesOfSendersAndRequestDates.Split('#');
-                            string[] SplittedFriendRequestDetails;
-                            string name;
-                            string DetailsOfFriendRequestSenders = "";
-                            //for (int index = FriendRequestDetails.Length - 1; index >= 0; index--)
-                            //{
-                            //    SplittedFriendRequestDetails = FriendRequestDetails[index].Split('^');
-                            //    name = SplittedFriendRequestDetails[0];
-                            //    string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
-                            //    if (profilePicture != "")
-                            //    {
-                            //        DetailsOfFriendRequestSenders = FriendRequestDetails[index] + "^" + profilePicture + "#";
-                            //    }
-                            //}
-                            foreach (string friendRequestDetails in FriendRequestDetails)
-                            {
-                                SplittedFriendRequestDetails = friendRequestDetails.Split('^');
-                                name = SplittedFriendRequestDetails[0];
-                                string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
-                                if (profilePicture != "")
-                                {
-                                    DetailsOfFriendRequestSenders += friendRequestDetails + "^" + profilePicture + "#";
-                                }
-                            }
-                            if (DetailsOfFriendRequestSenders.EndsWith("#"))
-                            {
-                                DetailsOfFriendRequestSenders = DetailsOfFriendRequestSenders.Substring(0, DetailsOfFriendRequestSenders.Length - 1);
-                            }
-                            SendMessage(PastFriendRequestsResponse, DetailsOfFriendRequestSenders);
-
-                        }
-                        else if (requestNumber == VideoCallRequest)
-                        {
-                            string friendName = DecryptedMessageDetails;
-                            if ((UserIsConnected(friendName)) && (DataHandler.StatusIsExist(friendName)))
-                            {
-                                //establish a udp connection between them two and the server...
-                                string messageContent = VideoCallResponse2 + "#" + _ClientNick;
-                                Unicast(VideoCallResponse, messageContent, friendName); //what if he is currently in a call? will it work //todo - needs to check that in the future
-                            }
-                            else
-                            {
-                                SendMessage(VideoCallResponse, VideoCallResponse1);
-
-                            }
-                        }
-                        else if (requestNumber == VideoCallResponseSender)
-                        {
-                            string[] messageContent = DecryptedMessageDetails.Split('#');
-                            string messageInformation = messageContent[0];
-                            string friendName = messageContent[1];
-                            if (messageInformation == VideoCallResponseResult1)
-                            {
-                                Unicast(VideoCallResponseReciever, VideoCallResponseResult1, friendName);
-                                //needs to create the udp connection...
-
-                                //to do something like that:
-                                //Guid callId = Guid.NewGuid(); // Generate a unique identifier for the call
-                                //VideoCallMembers call = new VideoCallMembers(_clientIP,_clientAddress);
-
-                                //Program.VideoCalls[callId] = call;
-
-                            }
-                            else //the call wont happen...
-                            {
-                                Unicast(VideoCallResponseReciever, VideoCallResponseResult2, friendName);
-
-                            }
-                        }
-                        else if (requestNumber == GroupCreatorRequest)
-                        {
-                            ChatCreator newChat = JsonConvert.DeserializeObject<ChatCreator>(DecryptedMessageDetails);
-                            if (DataHandler.CreateGroupChat(newChat) > 0)
-                            {
-                                SendMessage(GroupCreatorResponse, "Group was successfully created");
-                                List<string> chatMembers = newChat._chatParticipants;
-                                chatMembers.RemoveAt(0);
-                                ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
-                                //needs to send this group creation to every logged user...
-                            }
-
+                            case
                         }
                     }
 
-                    
+
 
                 }
                 lock (_client.GetStream())
@@ -738,7 +317,491 @@ namespace YouChatServer
                 //Broadcast(_ClientNick + " has left the chat.");
 
             }
-        }//end ReceiveMessage
+        }//end R
+
+        /// <summary>
+        /// The ReceiveMessage method recieves and handles the incomming stream
+        /// </summary>
+        /// <param name="ar">IAsyncResult Interface</param>
+        //public void ReceiveMessage(IAsyncResult ar)
+        //    {
+        //        int bytesRead;
+        //        try
+        //        {
+        //            lock (_client.GetStream())
+        //            {
+        //                // call EndRead to handle the end of an async read.
+        //                bytesRead = _client.GetStream().EndRead(ar);
+        //            }
+        //            // if bytesread<1 -> the client disconnected
+        //            if (bytesRead < 1)
+        //            {
+        //                // remove the client from out list of clients
+        //                AllClients.Remove(_clientIP);
+        //                disconnectedClients.Enqueue(PlayerNum);
+        //                return;
+        //            }
+        //            else // client still connected
+        //            {
+        //                string messageReceived = System.Text.Encoding.ASCII.GetString(data, 0, bytesRead);
+        //                string[] messageToArray = messageReceived.Split('$');
+        //                int requestNumber = Convert.ToInt32(messageToArray[0]);
+        //                string messageDetails = messageToArray[1];
+        //                string DecryptedMessageDetails;
+        //                // if the client is sending send me datatable
+        //                if (requestNumber == EncryptionClientPublicKeySender)
+        //                {
+        //                    ClientPublicKey = messageDetails;
+        //                    SendMessage(EncryptionServerPublicKeyReciever, Rsa.GetPublicKey());
+        //                    //SendMessage(EncryptionServerPublicKeyReciever + "$" + Rsa.GetPublicKey());
+
+        //                    SymmetricKey = RandomStringCreator.RandomString(32);
+        //                    string EncryptedSymmerticKey = Rsa.Encrypt(SymmetricKey, ClientPublicKey);
+        //                    SendMessage(EncryptionSymmetricKeyReciever, EncryptedSymmerticKey);
+        //                    //SendMessage(EncryptionSymmetricKeyReciever + "$" + EncryptedSymmerticKey);
+
+        //                }
+        //                else
+        //                {
+        //                    DecryptedMessageDetails = Encryption.Encryption.DecryptData(SymmetricKey, messageDetails);
+        //                    if (requestNumber == registerRequest)
+        //                    {
+        //                        string[] data = DecryptedMessageDetails.Split('#');
+        //                        if (!UserDetails.DataHandler.usernameIsExist(data[0]) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
+        //                        {
+        //                            if (UserDetails.DataHandler.InsertUser(DecryptedMessageDetails) > 0)
+        //                            {
+        //                                _ClientNick = data[0];
+        //                                SendMessage(registerResponse, registerResponse1);
+        //                                //SendMessage(registerResponse + "$" + registerResponse1);
+
+        //                            }
+        //                            else//if regist not ok
+        //                            {
+        //                                SendMessage(registerResponse, registerResponse2);
+        //                                //SendMessage(registerResponse + "$" + registerResponse2);
+
+        //                            }
+        //                        }
+        //                        else//if regist not ok
+        //                        {
+        //                            SendMessage(registerResponse, registerResponse2);
+        //                            //SendMessage(registerResponse + "$" + registerResponse2);
+
+        //                        }
+        //                    }
+        //                    else if (requestNumber == loginRequest)
+        //                    {
+        //                        //string[] data = messageDetails.Split('#');
+        //                        string[] data = DecryptedMessageDetails.Split('#');
+
+        //                        //if ((UserDetails.DataHandler.isExist(messageDetails)) && (!UserIsConnected(data[0])))
+
+        //                        if ((UserDetails.DataHandler.isExist(DecryptedMessageDetails)) && (!UserIsConnected(data[0])))
+        //                        {
+        //                            _ClientNick = data[0];
+        //                            string emailAddress = UserDetails.DataHandler.GetEmailAddress(_ClientNick);
+        //                            if (emailAddress != "")
+        //                            {
+        //                                SendMessage(loginResponse, emailAddress);
+        //                                //SendMessage(loginResponse + "$" + emailAddress);
+
+        //                            }
+        //                            else
+        //                            {
+        //                                //todo - send a message saying there was a problem
+        //                            }
+        //                        }
+        //                        else
+        //                        {
+        //                            ClientAttemptsState clientAttemptsState;
+        //                            if (!_clientFailedAttempts.ContainsKey(_clientAddress))
+        //                            {
+        //                                clientAttemptsState = new ClientAttemptsState(this);
+        //                                _clientFailedAttempts[_clientAddress] = clientAttemptsState;
+        //                            }
+        //                            else
+        //                            {
+        //                                clientAttemptsState = _clientFailedAttempts[_clientAddress];
+        //                            }
+        //                            clientAttemptsState.HandleFailedAttempt();
+        //                            //if (_clientFailedAttempts.ContainsKey(_clientIP))
+        //                            //{
+        //                            //    _clientFailedAttempts[_clientIP]++;
+
+        //                            //}
+        //                            //else
+        //                            //{
+        //                            //    _clientFailedAttempts[_clientIP] = 1;
+
+        //                            //}
+        //                            //if (_clientFailedAttempts[_clientIP] > 5)
+        //                            //{
+        //                            //    //handle waiting..
+        //                            //    // todo - handle block of spamming user and maybe do the following act:
+        //                            //    //to send a message to the user saying his account got blocked for 10 minutes because someone tried to enter..
+        //                            //}
+        //                            SendMessage(loginResponse, loginResponse2);
+        //                            //SendMessage(loginResponse + "$" + loginResponse2);
+
+        //                        }
+        //                    }
+        //                    else if (requestNumber == sendMessageRequest)
+        //                    {
+        //                        string message = _ClientNick + "#" + DecryptedMessageDetails;
+        //                        Multicast(sendMessageResponse, message);
+        //                        //Broadcast(sendMessageResponse + "$" + message);
+
+        //                    }
+        //                    else if (requestNumber == ContactInformationRequest)
+        //                    {
+        //                        string ContactsInformation = "Dan" + "^" + "hi" + "^" + "07:50" + "^" + "Male3" + "#" + "Ben" + "^" + "how you doing" + "^" + "17:53" + "^" + "Female3 " + "#" + "Ron" + "^" + "YOO" + "^" + "03:43" + "^" + "Male4"; //בעתיד לקחת מידע מהdatabase
+        //                        SendMessage(ContactInformationResponse, ContactsInformation);
+        //                        //SendMessage(ContactInformationResponse + "$" + ContactsInformation);
+
+        //                    }
+        //                    else if ((requestNumber == UploadProfilePictureRequest))
+        //                    {
+        //                        if (UserDetails.DataHandler.InsertProfilePicture(_ClientNick, DecryptedMessageDetails) > 0)
+        //                        {
+        //                            SendMessage(UploadProfilePictureResponse, DecryptedMessageDetails);
+        //                            //SendMessage(UploadProfilePictureResponse + "$" + registerResponse1);
+
+        //                        }
+        //                    }
+        //                    else if ((requestNumber == UploadStatusRequest))
+        //                    {
+        //                        if (UserDetails.DataHandler.InsertStatus(_ClientNick, DecryptedMessageDetails) > 0)
+        //                        {
+        //                            SendMessage(UploadStatusResponse, DecryptedMessageDetails);
+        //                            //SendMessage(UploadStatusResponse + "$" + registerResponse1);
+
+        //                        }
+        //                    }
+        //                    else if (requestNumber == ResetPasswordRequest)
+        //                    {
+        //                        if (UserDetails.DataHandler.IsMatchingUsernameAndEmailAddressExist(DecryptedMessageDetails))
+        //                        {
+        //                            SendMessage(ResetPasswordResponse, ResetPasswordResponse1);
+        //                            //SendMessage(ResetPasswordResponse + "$" + ResetPasswordResponse1);
+
+        //                        }
+        //                        else
+        //                        {
+        //                            SendMessage(ResetPasswordResponse, ResetPasswordResponse2);
+        //                            //SendMessage(ResetPasswordResponse + "$" + ResetPasswordResponse2);
+
+        //                        }
+        //                    }
+        //                    else if ((requestNumber == PasswordRenewalMessageRequest) || (requestNumber == PasswordUpdateRequest))
+        //                    {
+        //                        bool IsPasswordRenewalMessageRequest = (requestNumber == PasswordRenewalMessageRequest);
+        //                        int identifierNumber; //maybe instead of handling both here i should write a method that get the idnumber and send the message accordinglly...
+        //                        bool HasAccessToChange = true;
+        //                        string[] data = DecryptedMessageDetails.Split('#');
+        //                        string username = data[0];
+        //                        string NewPassword = data[1];
+        //                        if (IsPasswordRenewalMessageRequest)
+        //                        {
+        //                            identifierNumber = PasswordRenewalMessageResponse;
+        //                        }
+        //                        else
+        //                        {
+        //                            identifierNumber = PasswordUpdateResponse;
+
+        //                        }
+        //                        if (!IsPasswordRenewalMessageRequest)
+        //                        {
+        //                            string OldPassword = data[2];
+        //                            if (!UserDetails.DataHandler.PasswordIsExist(username, OldPassword)) //means the password already been chosen once by the user...
+        //                            {
+        //                                HasAccessToChange = false;
+        //                                SendMessage(identifierNumber, PasswordMessageResponse4); //past password not matching..
+
+        //                            }
+        //                        }
+        //                        if (HasAccessToChange)
+        //                        {
+        //                            if (UserDetails.DataHandler.PasswordIsExist(username, NewPassword)) //means the password already been chosen once by the user...
+        //                            {
+        //                                SendMessage(identifierNumber, PasswordMessageResponse1);
+
+        //                            }
+        //                            else
+        //                            {
+        //                                if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
+        //                                {
+        //                                    UserDetails.DataHandler.AddColumnToUserPastPasswords();
+        //                                }
+        //                                if (UserDetails.DataHandler.SetNewPassword(username, NewPassword) > 0)
+        //                                {
+        //                                    SendMessage(identifierNumber, PasswordMessageResponse2);
+        //                                    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
+        //                                }
+        //                                else
+        //                                {
+        //                                    SendMessage(identifierNumber, PasswordMessageResponse3);
+        //                                    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
+
+        //                                }
+        //                            }
+        //                        }
+
+        //                    }
+        //                    else if (requestNumber == InitialProfileSettingsCheckRequest)
+        //                    {
+        //                        if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
+        //                        {
+        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse1);
+
+        //                        }
+        //                        else if (!UserDetails.DataHandler.ProfilePictureIsExist(_ClientNick)) //todo - change this - after doing the captcha i should ask the server for this information
+        //                        {
+        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse2);
+        //                            //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse4);
+
+        //                        }
+        //                        else if (!UserDetails.DataHandler.StatusIsExist(_ClientNick))
+        //                        {
+        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse3);
+        //                            //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse5);
+        //                        }
+        //                        else
+        //                        {
+        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse4);
+        //                            //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse1);
+        //                            if (UserDetails.DataHandler.SetUserOnline(_ClientNick) > 0)
+        //                            {
+        //                                //was ok...
+        //                            }
+
+        //                        }
+        //                    }
+        //                    else if (requestNumber == UserDetailsRequest)
+        //                    {
+        //                        string UserInformation = UserDetails.DataHandler.GetUserProfileSettings(_ClientNick);
+        //                        SendMessage(UserDetailsResponse, UserInformation);
+        //                    }
+        //                    else if (requestNumber == FriendRequestSender) //todo - needs to check if the user already sent a friend request before..
+        //                    {
+        //                        string[] data = DecryptedMessageDetails.Split('#');
+        //                        string FriendRequestReceiverUsername = data[0];
+        //                        string FriendRequestSenderUsername = _ClientNick;
+
+        //                        if (FriendRequestSenderUsername != FriendRequestReceiverUsername)
+        //                        {
+        //                            if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(DecryptedMessageDetails))
+        //                            {
+        //                                //ask friend request..
+        //                                if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
+        //                                {
+        //                                    //was successful
+        //                                    //to check if he is online...
+        //                                    if (UserIsConnected(FriendRequestReceiverUsername))
+        //                                    {
+        //                                        string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
+        //                                        if (profilePicture != "")
+        //                                        {
+        //                                            string userDetails = FriendRequestSenderUsername + "^" + profilePicture;
+        //                                            Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
+        //                                                                                                                        //need to handle when logging in if there were message request sent before...
+        //                                        }
+
+        //                                    }
+        //                                }
+        //                                else
+        //                                {
+        //                                    //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
+        //                                }
+
+        //                            }
+        //                        }
+
+        //                    }
+        //                    else if (requestNumber == FriendRequestResponseSender)
+        //                    {
+        //                        string[] data = DecryptedMessageDetails.Split('#'); //needs to string from the client the name of the user who sent and then the accept/deny...
+        //                        string FriendRequestSenderUsername = data[0];
+        //                        string FriendRequestReceiverUsername = _ClientNick;
+        //                        string FriendRequestStatus = data[1];
+        //                        if (UserDetails.DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
+        //                        {
+        //                            if (FriendRequestStatus == FriendRequestResponseSender1)
+        //                            {
+        //                                if ((UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestSenderUsername)) || (UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestReceiverUsername)))
+        //                                {
+        //                                    UserDetails.DataHandler.AddColumnToFriends();
+        //                                }
+        //                                if (UserDetails.DataHandler.AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0) //one worked...
+        //                                {
+        //                                    if (UserDetails.DataHandler.AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername) > 0) //both worked...
+        //                                    {
+        //                                        Unicast(FriendRequestResponseReceiver, "the friend request has been accepted", FriendRequestSenderUsername);
+        //                                    }
+        //                                }
+        //                                //if (UserDetails.DataHandler.setne(username, password) > 0)
+        //                                //{
+        //                                //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse2);
+        //                                //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
+        //                                //}
+        //                                //else
+        //                                //{
+        //                                //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse3);
+        //                                //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
+
+        //                                //}                                    //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
+        //                            }
+        //                            else if (FriendRequestStatus == FriendRequestResponseSender2)
+        //                            {
+        //                                // doesn't really need to do something... maybe in the future i will think abt something
+        //                            }
+        //                        }
+        //                        else
+        //                        {
+        //                            //was an error...
+        //                        }
+
+        //                    }
+        //                    else if (requestNumber == FriendsProfileDetailsRequest)
+        //                    {
+        //                        //string FriendsName = UserDetails.DataHandler.GetFriendList(_ClientNick);
+        //                        //Dictionary<string, string> FriendsProfileDetailsDictionary = UserDetails.DataHandler.GetFriendsProfileInformation(FriendsName);
+        //                        ////here i check the need for split messages...
+        //                        //List<string> FriendsProfileDetails = new List<string>();
+        //                        //int AllFriendProfileDetailsLength = 0;
+        //                        //string FriendProfileDetails = "";
+        //                        //int index = 0;
+        //                        //foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
+        //                        //{
+        //                        //    FriendProfileDetails = "#" + kvp.Value;
+        //                        //    byte[] currentUserDetailsBytes = Encoding.UTF8.GetBytes(FriendProfileDetails);
+
+        //                        //    if (currentUserDetailsBytes.Length + AllFriendProfileDetailsLength + 4> 1500)      //needs to check if adding the content of the profiledetails will be two much length
+        //                        //    {
+        //                        //        index += 1;
+        //                        //        AllFriendProfileDetailsLength = 0;
+        //                        //    }
+        //                        //    FriendsProfileDetails[index] += FriendProfileDetails;
+        //                        //    AllFriendProfileDetailsLength += currentUserDetailsBytes.Length;
+        //                        //}
+        //                        //foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
+        //                        //{
+        //                        //    SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet.Remove(0, 1)); //maybe i should split to couple of messages...
+        //                        //}
+        //                    }
+        //                    else if (requestNumber == disconnectRequest)
+        //                    {
+        //                        if (_ClientNick != null)
+        //                        {
+        //                            if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
+        //                            {
+        //                                //was ok...
+        //                            }
+        //                        }
+        //                    }
+        //                    else if (requestNumber == PastFriendRequestsRequest)
+        //                    {
+        //                        string FriendRequestNamesOfSendersAndRequestDates = UserDetails.DataHandler.CheckFriendRequests(_ClientNick);
+        //                        string[] FriendRequestDetails = FriendRequestNamesOfSendersAndRequestDates.Split('#');
+        //                        string[] SplittedFriendRequestDetails;
+        //                        string name;
+        //                        string DetailsOfFriendRequestSenders = "";
+        //                        //for (int index = FriendRequestDetails.Length - 1; index >= 0; index--)
+        //                        //{
+        //                        //    SplittedFriendRequestDetails = FriendRequestDetails[index].Split('^');
+        //                        //    name = SplittedFriendRequestDetails[0];
+        //                        //    string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
+        //                        //    if (profilePicture != "")
+        //                        //    {
+        //                        //        DetailsOfFriendRequestSenders = FriendRequestDetails[index] + "^" + profilePicture + "#";
+        //                        //    }
+        //                        //}
+        //                        foreach (string friendRequestDetails in FriendRequestDetails)
+        //                        {
+        //                            SplittedFriendRequestDetails = friendRequestDetails.Split('^');
+        //                            name = SplittedFriendRequestDetails[0];
+        //                            string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
+        //                            if (profilePicture != "")
+        //                            {
+        //                                DetailsOfFriendRequestSenders += friendRequestDetails + "^" + profilePicture + "#";
+        //                            }
+        //                        }
+        //                        if (DetailsOfFriendRequestSenders.EndsWith("#"))
+        //                        {
+        //                            DetailsOfFriendRequestSenders = DetailsOfFriendRequestSenders.Substring(0, DetailsOfFriendRequestSenders.Length - 1);
+        //                        }
+        //                        SendMessage(PastFriendRequestsResponse, DetailsOfFriendRequestSenders);
+
+        //                    }
+        //                    else if (requestNumber == VideoCallRequest)
+        //                    {
+        //                        string friendName = DecryptedMessageDetails;
+        //                        if ((UserIsConnected(friendName)) && (DataHandler.StatusIsExist(friendName)))
+        //                        {
+        //                            //establish a udp connection between them two and the server...
+        //                            string messageContent = VideoCallResponse2 + "#" + _ClientNick;
+        //                            Unicast(VideoCallResponse, messageContent, friendName); //what if he is currently in a call? will it work //todo - needs to check that in the future
+        //                        }
+        //                        else
+        //                        {
+        //                            SendMessage(VideoCallResponse, VideoCallResponse1);
+
+        //                        }
+        //                    }
+        //                    else if (requestNumber == VideoCallResponseSender)
+        //                    {
+        //                        string[] messageContent = DecryptedMessageDetails.Split('#');
+        //                        string messageInformation = messageContent[0];
+        //                        string friendName = messageContent[1];
+        //                        if (messageInformation == VideoCallResponseResult1)
+        //                        {
+        //                            Unicast(VideoCallResponseReciever, VideoCallResponseResult1, friendName);
+        //                            //needs to create the udp connection...
+
+        //                            //to do something like that:
+        //                            //Guid callId = Guid.NewGuid(); // Generate a unique identifier for the call
+        //                            //VideoCallMembers call = new VideoCallMembers(_clientIP,_clientAddress);
+
+        //                            //Program.VideoCalls[callId] = call;
+
+        //                        }
+        //                        else //the call wont happen...
+        //                        {
+        //                            Unicast(VideoCallResponseReciever, VideoCallResponseResult2, friendName);
+
+        //                        }
+        //                    }
+        //                    else if (requestNumber == GroupCreatorRequest)
+        //                    {
+        //                        ChatCreator newChat = JsonConvert.DeserializeObject<ChatCreator>(DecryptedMessageDetails);
+        //                        if (DataHandler.CreateGroupChat(newChat) > 0)
+        //                        {
+        //                            SendMessage(GroupCreatorResponse, "Group was successfully created");
+        //                            List<string> chatMembers = newChat._chatParticipants;
+        //                            chatMembers.RemoveAt(0);
+        //                            ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
+        //                            //needs to send this group creation to every logged user...
+        //                        }
+
+        //                    }
+        //                }
+
+
+
+        //            }
+        //            lock (_client.GetStream())
+        //            {
+        //                // continue reading from the client
+        //                _client.GetStream().BeginRead(data, 0, System.Convert.ToInt32(_client.ReceiveBufferSize), ReceiveMessage, null);
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            AllClients.Remove(_clientIP);
+        //            //Broadcast(_ClientNick + " has left the chat.");
+
+        //        }
+        //    }//end ReceiveMessage
 
         /// <summary>
         /// The SendMessage method sends a message to the connected client

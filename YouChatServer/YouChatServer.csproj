@@ -74,6 +74,8 @@
     <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\MD5.cs" />
     <Compile Include="Encryption\RSAServiceProvider.cs" />
+    <Compile Include="EnumHandler\EnumConverter.cs" />
+    <Compile Include="EnumHandler\EnumHandler.cs" />
     <Compile Include="JsonClasses\PersonalVerificationAnswers.cs" />
     <Compile Include="JsonClasses\RegistrationInformation.cs" />
     <Compile Include="Logger\Logger.cs" />
@@ -87,6 +89,8 @@
     </Compile>
     <Compile Include="RandomStringCreator.cs" />
     <Compile Include="SmtpHandler.cs" />
+    <Compile Include="UdpHandler\AudioUdpHandler.cs" />
+    <Compile Include="UdpHandler\VideoUdpHandler.cs" />
     <Compile Include="UserDetails\DataCreator.cs" />
     <Compile Include="UserDetails\DataHandler.cs" />
     <Compile Include="VideoCallMembers.cs" />
