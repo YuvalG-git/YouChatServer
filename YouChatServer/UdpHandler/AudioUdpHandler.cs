@@ -24,10 +24,16 @@ namespace YouChatServer.UdpHandler
             {
                 IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
-                byte[] imageData = AudioUdpClient.Receive(ref clientEndPoint);
-                AudioUdpClient.Send(imageData, imageData.Length, clientEndPoint);
+                byte[] encryptedData = AudioUdpClient.Receive(ref clientEndPoint);
+                string key = Client.clientKeys[clientEndPoint];
+                // Decrypt the received data using the client's key
+                byte[] decryptedData = Encryption.Encryption.DecryptDataToBytes(key, encryptedData);
+                byte[] serverEncryptedData = Encryption.Encryption.EncryptDataToBytes(key, decryptedData);
+                AudioUdpClient.Send(serverEncryptedData, serverEncryptedData.Length, clientEndPoint);
             }
-        }
 
+            //byte[] imageData = AudioUdpClient.Receive(ref clientEndPoint);
+            //AudioUdpClient.Send(imageData, imageData.Length, clientEndPoint);
+        }
     }
 }

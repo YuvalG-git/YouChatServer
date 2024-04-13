@@ -21,6 +21,9 @@ using System.Net.Mail;
 using YouChatServer.UserDetails;
 using Newtonsoft.Json;
 using YouChatServer.ChatHandler;
+using System.CodeDom;
+using YouChatServer.JsonClasses;
+using YouChatServer.CaptchaHandler;
 
 namespace YouChatServer
 {
@@ -35,10 +38,15 @@ namespace YouChatServer
         /// The list is static so all the clients will be able to obtain the list of current connected client
         /// </summary>
         public static Hashtable AllClients = new Hashtable();
+        public static Dictionary<string, Chat> AllChats = new Dictionary<string, Chat>();
+
         //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
         private Dictionary<IPAddress, ClientAttemptsState> _clientFailedAttempts = new Dictionary<IPAddress, ClientAttemptsState>(); 
 
         public static List<Client> clientsList = new List<Client>();
+
+
+        public static Dictionary<IPEndPoint, string> clientKeys = new Dictionary<IPEndPoint, string>();
 
         /// <summary>
         /// Represents the maximum number of clients that were connected to the game
@@ -64,6 +72,8 @@ namespace YouChatServer
         private string _clientIP;
 
         private IPAddress _clientAddress;
+        private IPEndPoint _clientIPEndPoint;
+
 
         /// <summary>
         /// Represents the client username
@@ -107,6 +117,7 @@ namespace YouChatServer
 
         static Random Random = new Random();
 
+        private bool isClientConnected;
         /// <summary>
         /// Request/Response kinds' which are used in sending and recieving messages
         /// </summary>
@@ -208,6 +219,12 @@ namespace YouChatServer
         const string VideoCallResponseResult1 = "Joining the video call";
         const string VideoCallResponseResult2 = "Declining the video call";
         const string GroupCreatorResponse1 = "Group was successfully created";
+
+
+
+        const string RightSmtpCode = "right";
+        const string WrongSmtpCode = "wrong";
+
         /// <summary>
         /// Represents rather the nickname has been sent
         /// </summary>
@@ -219,19 +236,21 @@ namespace YouChatServer
         private string PrivateKey;
 
         private string SymmetricKey;
-
+        private SmtpHandler smtpHandler;
+        private EncryptionExpirationDate encryptionExpirationDate;
+        private CaptchaCodeHandler captchaCodeHandler;
+        private CaptchaRotatingImageHandler captchaRotatingImageHandler;
         /// <summary>
         /// The Client constructor initializes the client object, registers it with the server's client collection, and starts asynchronous data reading from the client
         /// </summary>
         /// <param name="client">Represents the client who connected to the server </param>
         public Client(TcpClient client)
         {
-            Rsa = new RSAServiceProvider();
-            PrivateKey = Rsa.GetPrivateKey();
             _client = client;
-            Logger.LogUserLogIn("The user has established a connection to the server.");
+            Logger.LogUserLogIn("A user has established a connection to the server.");
             // get the ip address of the client to register him with our client list
-            _clientAddress = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
+            _clientIPEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
+            _clientAddress = _clientIPEndPoint.Address;
             _clientIP = client.Client.RemoteEndPoint.ToString();
             // Add the new client to our clients collection
             AllClients.Add(_clientIP, this);
@@ -243,11 +262,22 @@ namespace YouChatServer
             // BeginRead will begin async read from the NetworkStream
             // This allows the server to remain responsive and continue accepting new connections from other clients
             // When reading complete control will be transfered to the ReviveMessage() function.
+            //_client.GetStream().BeginRead(data,
+            //                              0,
+            //                              System.Convert.ToInt32(_client.ReceiveBufferSize),
+            //                              ReceiveMessage,
+            //                              null);
             _client.GetStream().BeginRead(data,
-                                          0,
-                                          System.Convert.ToInt32(_client.ReceiveBufferSize),
-                                          ReceiveMessage,
-                                          null);
+                              0,
+                              4,
+                              ReceiveMessageLength,
+                              null);
+
+            isClientConnected = true;
+            smtpHandler = new SmtpHandler();
+            encryptionExpirationDate = new EncryptionExpirationDate(this);
+            captchaCodeHandler = new CaptchaCodeHandler();
+            captchaRotatingImageHandler = new CaptchaRotatingImageHandler();
         }
         
         public static string RandomKey(int Length)
@@ -255,68 +285,726 @@ namespace YouChatServer
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string (Enumerable.Repeat(chars, Length).Select(s => s[Random.Next(s.Length)]).ToArray());
         }
-        public void ReceiveMessage(IAsyncResult ar)
+        private void HandleEncryptionClientPublicKeySenderEnum(JsonObject jsonObject)
         {
-            int bytesRead;
-            try
+            ClientPublicKey = jsonObject.MessageBody as string;
+
+
+            //string serverPublicKey = Rsa.GetPublicKey();
+            //SymmetricKey = RandomStringCreator.RandomString(32);
+            //string EncryptedSymmerticKey = Rsa.Encrypt(SymmetricKey, ClientPublicKey);
+            //EncryptionKeys encryptionKeys = new EncryptionKeys(EncryptedSymmerticKey, serverPublicKey);
+            //JsonObject serverPublicKeyJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EncryptionServerPublicKeyAndSymmetricKeyReciever, encryptionKeys);
+            //string serverPublicKeyJson = JsonConvert.SerializeObject(serverPublicKeyJsonObject, new JsonSerializerSettings
+            //{
+            //    TypeNameHandling = TypeNameHandling.Auto
+            //});
+            //SendMessage(serverPublicKeyJson, false);
+            Rsa = new RSAServiceProvider();
+            PrivateKey = Rsa.GetPrivateKey();
+            string serverPublicKey = Rsa.GetPublicKey();
+            JsonObject serverPublicKeyJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EncryptionServerPublicKeyReciever, serverPublicKey);
+            string serverPublicKeyJson = JsonConvert.SerializeObject(serverPublicKeyJsonObject, new JsonSerializerSettings
             {
-                lock (_client.GetStream())
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            Console.WriteLine("print");
+            Console.WriteLine(serverPublicKeyJson);
+            SendMessage(serverPublicKeyJson, false);
+            SymmetricKey = RandomStringCreator.RandomString(32);
+            string EncryptedSymmerticKey = Rsa.Encrypt(SymmetricKey, ClientPublicKey);
+            JsonObject encryptedSymmerticKeyJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EncryptionSymmetricKeyReciever, EncryptedSymmerticKey);
+            string EncryptedSymmerticKeyJson = JsonConvert.SerializeObject(encryptedSymmerticKeyJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            Console.WriteLine("print");
+            Console.WriteLine(EncryptedSymmerticKeyJson);
+            //Thread.Sleep(1000);
+            SendMessage(EncryptedSymmerticKeyJson, false);
+            encryptionExpirationDate.Start();
+        }
+        private void HandleLoginRequestEnum(JsonObject jsonObject)
+        {
+            LoginDetails loginDetails = jsonObject.MessageBody as LoginDetails;
+            string username = loginDetails.Username;
+            string password = loginDetails.Password;
+            if ((DataHandler.isMatchingUsernameAndPasswordExist(username, password)) && (!UserIsConnected(username)))
+            {
+                _ClientNick = username;
+                string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
+                if (emailAddress != "")
                 {
-                    // call EndRead to handle the end of an async read.
-                    bytesRead = _client.GetStream().EndRead(ar);
-                }
-                // if bytesread<1 -> the client disconnected
-                if (bytesRead < 1)
-                {
-                    // remove the client from out list of clients
-                    AllClients.Remove(_clientIP);
-                    disconnectedClients.Enqueue(PlayerNum);
-                    return;
-                }
-                else // client still connected
-                {
-                    string messageReceived = System.Text.Encoding.ASCII.GetString(data, 0, bytesRead);
-                    string[] messageToArray = messageReceived.Split('$');
-                    int requestNumber = Convert.ToInt32(messageToArray[0]);
-                    string messageDetails = messageToArray[1];
-                    string DecryptedMessageDetails;
-                    // if the client is sending send me datatable
-                    if (requestNumber == EncryptionClientPublicKeySender)
+                    smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
+                    JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage,null);
+                    string smtpLoginMessageJson = JsonConvert.SerializeObject(smtpLoginMessageJsonObject, new JsonSerializerSettings
                     {
-                        ClientPublicKey = messageDetails;
-                        SendMessage(EncryptionServerPublicKeyReciever, Rsa.GetPublicKey());
-                        //SendMessage(EncryptionServerPublicKeyReciever + "$" + Rsa.GetPublicKey());
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(smtpLoginMessageJson);
+                }
+                else //shouldn't get here - emailaddress won't be empty...
+                {
+                    SendFailedLoginMessage();
+                }
+            }
+            else
+            {
+                ClientAttemptsState clientAttemptsState;
+                if (!_clientFailedAttempts.ContainsKey(_clientAddress))
+                {
+                    clientAttemptsState = new ClientAttemptsState(this);
+                    _clientFailedAttempts[_clientAddress] = clientAttemptsState;
+                }
+                else
+                {
+                    clientAttemptsState = _clientFailedAttempts[_clientAddress];
+                }
+                clientAttemptsState.HandleFailedAttempt();
+                SendFailedLoginMessage();
+            }
+        }
+        private void HandleloginRequest_SmtpLoginMessage(JsonObject jsonObject)
+        {
+            string username = jsonObject.MessageBody as string;
+            string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
+            smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
+            JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage, null);
+            string smtpLoginMessageJson = JsonConvert.SerializeObject(smtpLoginMessageJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(smtpLoginMessageJson);
+        }
 
-                        SymmetricKey = RandomStringCreator.RandomString(32);
-                        string EncryptedSymmerticKey = Rsa.Encrypt(SymmetricKey, ClientPublicKey);
-                        SendMessage(EncryptionSymmetricKeyReciever, EncryptedSymmerticKey);
-                        //SendMessage(EncryptionSymmetricKeyReciever + "$" + EncryptedSymmerticKey);
+        private void HandleRegistrationRequest_SmtpRegistrationCodeEnum(JsonObject jsonObject)
+        {
+            string code = jsonObject.MessageBody as string;
+            string codeResponse = (smtpHandler.GetSmtpCode() == code) ? RightSmtpCode : WrongSmtpCode;
+            JsonObject smtpRegistrationCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SmtpRegistrationCode, codeResponse);
+            string smtpRegistrationCodeResponseJson = JsonConvert.SerializeObject(smtpRegistrationCodeResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(smtpRegistrationCodeResponseJson);
+        }
 
+        private void HandleFriendRequestSenderEnum(JsonObject jsonObject) //todo - not finished...
+        {
+            FriendRequestDetails friendRequestDetails = jsonObject.MessageBody as FriendRequestDetails;
+            string FriendRequestReceiverUsername = friendRequestDetails.Username;
+            string FriendRequestReceiverTagLine = friendRequestDetails.TagLine;
+            string FriendRequestSenderUsername = _ClientNick;
+
+            if (FriendRequestSenderUsername != FriendRequestReceiverUsername)
+            {
+                if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(FriendRequestReceiverUsername, FriendRequestReceiverTagLine)) //if it's wrong i chose not to inform because he shouldnt know if there wasn't a client like that (this way he could find other clients...)
+                {
+                    //ask friend request..
+                    if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
+                    {
+                        //was successful
+                        string emailAddress = DataHandler.GetEmailAddress(FriendRequestReceiverUsername);
+                        //todo - check if it works...
+                        smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress); //sends if he is offline so he know and if he is online so he will know to look there...
+
+                        //to check if he is online...
+                        if (UserIsConnected(FriendRequestReceiverUsername))
+                        {
+                            string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
+                            if (profilePicture != "")
+                            {
+                                string userDetails = FriendRequestSenderUsername + "^" + profilePicture;
+                                Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
+                                                                                                            //need to handle when logging in if there were message request sent before...
+                            }
+                        }
                     }
                     else
                     {
-                        DecryptedMessageDetails = Encryption.Encryption.DecryptData(SymmetricKey, messageDetails);
-                        switch (requestNumber)
-                        {
-                            case
-                        }
+                        //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
                     }
 
-
-
-                }
-                lock (_client.GetStream())
-                {
-                    // continue reading from the client
-                    _client.GetStream().BeginRead(data, 0, System.Convert.ToInt32(_client.ReceiveBufferSize), ReceiveMessage, null);
                 }
             }
-            catch (Exception ex)
+        }
+        private void HandleRegistrationRequest_SmtpRegistrationMessageEnum(JsonObject jsonObject) 
+        {
+            SmtpDetails userUsernameAndEmailAddress = jsonObject.MessageBody as SmtpDetails;
+            string username = userUsernameAndEmailAddress.Username;
+            string emailAddress = userUsernameAndEmailAddress.EmailAddress;
+            smtpHandler.SendCodeToUserEmail(username,emailAddress,EnumHandler.SmtpMessageType_Enum.RegistrationMessage);
+            JsonObject SentEmailNotificationJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SmtpRegistrationMessage, null);
+            string SentEmailNotificationJson = JsonConvert.SerializeObject(SentEmailNotificationJsonObject, new JsonSerializerSettings
             {
-                AllClients.Remove(_clientIP);
-                //Broadcast(_ClientNick + " has left the chat.");
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(SentEmailNotificationJson);
+        }
+        private void HandleRegistrationRequest_RegistrationEnum(JsonObject jsonObject)
+        {
+            RegistrationInformation registrationInformation = jsonObject.MessageBody as RegistrationInformation;
+            string username = registrationInformation.Username;
+            string password = registrationInformation.Password;
+            string firstName = registrationInformation.FirstName;
+            string lastName = registrationInformation.LastName;
+            string emailAddress = registrationInformation.EmailAddress;
+            string cityName = registrationInformation.CityName;
+            DateTime dateOfBirth = registrationInformation.DateOfBirth;
+            DateTime registrationDate = registrationInformation.RegistrationDate;
+            string gender = registrationInformation.Gender;
+            List<string[]> VerificationQuestionsAndAnswers = registrationInformation.VerificationQuestionsAndAnswers;
+            string dateOfBirthAsString = dateOfBirth.ToString("yyyy-MM-dd");
+            string registrationDateAsString = registrationDate.ToString("yyyy-MM-dd");
+
+            EnumHandler.CommunicationMessageID_Enum RegistrationResponseEnum;
+            if (!UserDetails.DataHandler.usernameIsExist(username) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
+            {
+                if (UserDetails.DataHandler.InsertUser(username,password,firstName,lastName,emailAddress,cityName,gender,dateOfBirthAsString,registrationDateAsString,VerificationQuestionsAndAnswers) > 0)
+                {
+                    _ClientNick = username;
+                    RegistrationResponseEnum = EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SuccessfulRegistration;
+                }
+                else//if regist not ok
+                {
+                    RegistrationResponseEnum = EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_FailedRegistration;
+                }
+            }
+            else//if regist not ok
+            {
+                RegistrationResponseEnum = EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_FailedRegistration;
+            }
+            JsonObject RegistrationResponseJsonObject = new JsonObject(RegistrationResponseEnum, null);
+            string RegistrationResponseJson = JsonConvert.SerializeObject(RegistrationResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(RegistrationResponseJson);
+        }
+
+        private void HandleRegistrationRequest_UploadProfilePictureRequest(JsonObject jsonObject) //todo - handle the else statment...
+        {
+            string profilePictureId = jsonObject.MessageBody as string;
+            if (UserDetails.DataHandler.InsertProfilePicture(_ClientNick, profilePictureId) > 0)
+            {
+                JsonObject UploadProfilePictureResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UploadProfilePictureResponse, profilePictureId);
+                string UploadProfilePictureResponseJson = JsonConvert.SerializeObject(UploadProfilePictureResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(UploadProfilePictureResponseJson);
+            }
+        }
+        private void HandleRegistrationRequest_UploadStatusRequest(JsonObject jsonObject)
+        {
+            string status = jsonObject.MessageBody as string;
+            if (UserDetails.DataHandler.InsertStatus(_ClientNick, status) > 0)
+            {
+                JsonObject UploadStatusResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UploadStatusResponse, status);
+                string UploadStatusResponseJson = JsonConvert.SerializeObject(UploadStatusResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(UploadStatusResponseJson);
+            }
+        }
+        private void SendFailedLoginMessage()
+        {
+            JsonObject failedLoginJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_FailedLogin,null);
+            string failedLoginJson = JsonConvert.SerializeObject(failedLoginJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(failedLoginJson);
+        }
+        private void HandleLoginRequest_SmtpLoginCode(JsonObject jsonObject)
+        {
+            string code = jsonObject.MessageBody as string;
+            object jsonContent = null;
+            EnumHandler.CommunicationMessageID_Enum SmtpLoginCodeResponseEnum;
+
+            if (smtpHandler.GetSmtpCode() == code)
+            {
+                Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
+                byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
+                jsonContent = new ImageContent(bytes);
+                SmtpLoginCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.LoginResponse_SuccessfulSmtpLoginCode;
+            }    
+            else
+            {
+                SmtpLoginCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.LoginResponse_FailedSmtpLoginCode;
+            }
+            JsonObject smtpLoginCodeResponseJsonObject = new JsonObject(SmtpLoginCodeResponseEnum, jsonContent);
+            string smtpLoginCodeResponseJson = JsonConvert.SerializeObject(smtpLoginCodeResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(smtpLoginCodeResponseJson);
+
+        }
+        private void HandleCAptchaBitMap()
+        {
+            Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
+            byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
+            ImageContent captchaBitmapContent = new ImageContent(bytes);
+            JsonObject smtpLoginCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.CaptchaImageResponse, captchaBitmapContent);;
+            string smtpLoginCodeResponseJson = JsonConvert.SerializeObject(smtpLoginCodeResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(smtpLoginCodeResponseJson);
+        }
+
+        private void HandleCaptchaImageRequestEnum(JsonObject jsonObject)
+        {
+            Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
+            byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
+            ImageContent captchaBitmapContent = new ImageContent(bytes);
+            JsonObject captchaBitmapContentJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.CaptchaImageResponse, captchaBitmapContent); ;
+            string captchaBitmapContentJson = JsonConvert.SerializeObject(captchaBitmapContentJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(captchaBitmapContentJson);
+        }
+        private void HandleDisconnectEnum(JsonObject jsonObject)
+        {
+            if (_ClientNick != null)
+            {
+                if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
+                {
+                    //was ok...
+                }
+            }
+            NetworkStream stream = _client.GetStream();
+            stream.Close();
+            _client.Close();
+            _client.Dispose();
+            _client = null;
+            isClientConnected = false;
+            AllClients.Remove(_clientIP);
+            Logger.LogUserLogOut("A user has logged out from the server.");
+        }
+        private void HandleCaptchaCodeRequestEnum(JsonObject jsonObject)
+        {
+            string code = jsonObject.MessageBody as string;
+            object jsonContent = null;
+            EnumHandler.CommunicationMessageID_Enum CaptchaCodeResponseEnum;
+
+            if (captchaCodeHandler.CompareCode(code))
+            {
+                CaptchaRotationImages captchaRotationImages = captchaRotatingImageHandler.GetCaptchaRotationImages();
+                int score = captchaRotatingImageHandler.GetScore();
+                int attempts = captchaRotatingImageHandler.GetAttempts();
+                CaptchaRotationSuccessRate captchaRotationSuccessRate = new CaptchaRotationSuccessRate(score, attempts);
+                jsonContent = new CaptchaRotationImageDetails(captchaRotationImages, captchaRotationSuccessRate);
+                //Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
+                //byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
+                //jsonContent = new ImageContent(bytes);
+                CaptchaCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulCaptchaCodeResponse;
+            }
+            else
+            {
+                CaptchaCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.FailedCaptchaCodeResponse;
+            }
+            JsonObject captchaCodeResponseJsonObject = new JsonObject(CaptchaCodeResponseEnum, jsonContent);
+            string captchaCodeResponseJson = JsonConvert.SerializeObject(captchaCodeResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(captchaCodeResponseJson);
+        }
+        private void HandleSendMessageRequestEnum(JsonObject jsonObject)
+        {
+            JsonClasses.Message message = jsonObject.MessageBody as JsonClasses.Message;
+            string messageContent = message.MessageContent;
+            Multicast(sendMessageResponse, messageContent);
+        }
+        private void HandlePasswordUpdateRequestEnum(JsonObject jsonObject)
+        {
+            PasswordUpdateDetails passwordUpdateDetails = jsonObject.MessageBody as PasswordUpdateDetails;
+            string username = passwordUpdateDetails.Username;
+            string pastPassword = passwordUpdateDetails.PastPassword;
+            string newPassword = passwordUpdateDetails.NewPassword;
+            if (!DataHandler.isMatchingUsernameAndPasswordExist(username, pastPassword)) 
+            {
+                JsonObject passwordRenewalJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedPasswordUpdateResponse_UnmatchedDetails, null);
+                string passwordRenewalJson = JsonConvert.SerializeObject(passwordRenewalJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(passwordRenewalJson);
+                //past password not matching..
+            }
+            else           
+            {
+                EnumHandler.CommunicationMessageID_Enum successfulPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.SuccessfulPasswordUpdateResponse;
+                EnumHandler.CommunicationMessageID_Enum failedPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.FailedPasswordUpdateResponse_PasswordExist;
+                EnumHandler.CommunicationMessageID_Enum errorPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.ErrorHandlePasswordUpdateResponse;
+
+                PasswordRenewalOptions passwordRenewalOptions = new PasswordRenewalOptions(successfulPasswordRenewal, failedPasswordRenewal, errorPasswordRenewal);
+                HandlePasswordRenewal(username,newPassword, passwordRenewalOptions);
+            }
+        }
+        private void HandlePasswordRenewal(string username, string password, PasswordRenewalOptions passwordRenewalOptions)
+        {
+            EnumHandler.CommunicationMessageID_Enum passwordRenewalEnumType;
+            if (UserDetails.DataHandler.PasswordIsExist(username, password)) //means the password already been chosen once by the user...
+            {
+                passwordRenewalEnumType = passwordRenewalOptions.GetFailedPasswordRenewal();
+            }
+            else
+            {
+                if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
+                {
+                    UserDetails.DataHandler.AddColumnToUserPastPasswords();
+                }
+                if (UserDetails.DataHandler.SetNewPassword(username, password) > 0)
+                {
+                    passwordRenewalEnumType = passwordRenewalOptions.GetSuccessfulPasswordRenewal();
+                }
+                else
+                {
+                    passwordRenewalEnumType = passwordRenewalOptions.GetErrorPasswordRenewal();
+                }
+            }
+            JsonObject passwordRenewalJsonObject = new JsonObject(passwordRenewalEnumType, null);
+            string passwordRenewalJson = JsonConvert.SerializeObject(passwordRenewalJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(passwordRenewalJson);
+        }
+        private void HandleUdpAudioConnectionRequestEnum(JsonObject jsonObject)
+        {
+            string portAsString = jsonObject.MessageBody as string;
+            int port = 0;
+            if (portAsString != null)
+            {
+                if (int.TryParse(portAsString, out port))
+                {
+                    // Conversion successful, 'port' now contains the integer value
+                    Console.WriteLine($"Parsed port: {port}");
+                }
+                else
+                {
+                    // Conversion failed
+                    Console.WriteLine("Failed to parse port. Invalid format.");
+                }
+            }
+            IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
+            clientKeys.Add(iPEndPoint, SymmetricKey);
+            JsonObject udpAudioConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionResponse, null);
+            string udpAudioConnectionRequestJson = JsonConvert.SerializeObject(udpAudioConnectionRequestJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(udpAudioConnectionRequestJson);
+        }
+        private void HandleUserDetailsRequestEnum(JsonObject jsonObject)
+        {
+            JsonClasses.UserDetails userDetails = DataHandler.GetUserProfileSettings(_ClientNick);
+            JsonObject userDetailsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UserDetailsResponse, userDetails);
+            string userDetailsJson = JsonConvert.SerializeObject(userDetailsJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(userDetailsJson);
+        }
+
+        private void HandleInitialProfileSettingsCheckRequestEnum(JsonObject jsonObject)
+        {
+            EnumHandler.CommunicationMessageID_Enum PersonalVerificationAnswersNextPhaseEnum;
+            
+            if (!DataHandler.ProfilePictureIsExist(_ClientNick)) 
+            {
+                PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckResponse_SetUserProfilePicture;
 
             }
+            else if (!DataHandler.StatusIsExist(_ClientNick))
+            {
+                PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckResponse_SetUserProfilePicture;
+
+            }
+            else if (DataHandler.SetUserOnline(_ClientNick) > 0)
+            {
+                PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckResponse_OpenChat;
+            }
+            else
+            {
+                PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckResponse_HandleError;
+            }
+
+            JsonObject personalVerificationAnswersResponseJsonObject = new JsonObject(PersonalVerificationAnswersNextPhaseEnum, null);
+            string personalVerificationAnswersResponseJson = JsonConvert.SerializeObject(personalVerificationAnswersResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(personalVerificationAnswersResponseJson);
+        }
+        private void HandlePersonalVerificationAnswersRequestEnum(JsonObject jsonObject)
+        {
+            PersonalVerificationAnswers personalVerificationAnswers = jsonObject.MessageBody as PersonalVerificationAnswers;
+            EnumHandler.CommunicationMessageID_Enum PersonalVerificationAnswersNextPhaseEnum;
+
+            if (DataHandler.CheckUserVerificationInformation(_ClientNick, personalVerificationAnswers))
+            {
+                if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
+                {
+                    PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_UpdatePassword;
+                }
+                else if (!DataHandler.ProfilePictureIsExist(_ClientNick)) //todo - change this - after doing the captcha i should ask the server for this information
+                {
+                    PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_SetUserProfilePicture;
+
+                }
+                else if (!DataHandler.StatusIsExist(_ClientNick))
+                {
+                    PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_SetUserStatus;
+
+                }
+                else if (DataHandler.SetUserOnline(_ClientNick) > 0)
+                {
+                    PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_OpenChat;
+                }
+                else
+                {
+                    //try again
+                    PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_HandleError;
+                }
+            }
+            else
+            {
+                PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.FailedPersonalVerificationAnswersResponse;
+            }
+
+            JsonObject personalVerificationAnswersResponseJsonObject = new JsonObject(PersonalVerificationAnswersNextPhaseEnum, null);
+            string personalVerificationAnswersResponseJson = JsonConvert.SerializeObject(personalVerificationAnswersResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(personalVerificationAnswersResponseJson);
+        }
+        private void HandleCaptchaImageAngleRequestEnum(JsonObject jsonObject)
+        {
+            double captchaImageAngle = (double)jsonObject.MessageBody;
+            captchaRotatingImageHandler.CheckAngle(captchaImageAngle);
+            if (captchaRotatingImageHandler.CheckAttempts())
+            {
+                if (captchaRotatingImageHandler.CheckSuccess())
+                {
+                    string[] userVerificationQuestions = DataHandler.GetUserVerificationQuestions(_ClientNick);
+                    string userVerificationQuestion1 = userVerificationQuestions[0];
+                    string userVerificationQuestion2 = userVerificationQuestions[1];
+                    string userVerificationQuestion3 = userVerificationQuestions[2];
+                    string userVerificationQuestion4 = userVerificationQuestions[3];
+                    string userVerificationQuestion5 = userVerificationQuestions[4];
+                    PersonalVerificationQuestions personalVerificationQuestions = new PersonalVerificationQuestions(userVerificationQuestion1, userVerificationQuestion2, userVerificationQuestion3, userVerificationQuestion4, userVerificationQuestion5);
+                    int score = captchaRotatingImageHandler.GetScore();
+                    int attempts = captchaRotatingImageHandler.GetAttempts() + 1;
+                    CaptchaRotationSuccessRate captchaRotationSuccessRate = new CaptchaRotationSuccessRate(score, attempts);
+                    PersonalVerificationQuestionDetails verificationQuestionDetails = new PersonalVerificationQuestionDetails(personalVerificationQuestions, captchaRotationSuccessRate);
+                    JsonObject verificationQuestionDetailsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulCaptchaImageAngleResponse, verificationQuestionDetails);
+                    string verificationQuestionDetailsJson = JsonConvert.SerializeObject(verificationQuestionDetailsJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(verificationQuestionDetailsJson);
+                }
+                else
+                {
+                    //ban
+                }
+            }
+            else
+            {
+                CaptchaRotationImages captchaRotationImages = captchaRotatingImageHandler.GetCaptchaRotationImages();
+                int score = captchaRotatingImageHandler.GetScore();
+                int attempts = captchaRotatingImageHandler.GetAttempts(); 
+                CaptchaRotationSuccessRate captchaRotationSuccessRate = new CaptchaRotationSuccessRate(score, attempts);
+                CaptchaRotationImageDetails captchaRotationImageDetails = new CaptchaRotationImageDetails(captchaRotationImages, captchaRotationSuccessRate);
+                JsonObject captchaCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.CaptchaImageAngleResponse, captchaRotationImageDetails);
+                string captchaCodeResponseJson = JsonConvert.SerializeObject(captchaCodeResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(captchaCodeResponseJson);
+            }
+        }
+
+        private void ReceiveMessageLength(IAsyncResult ar)
+        {
+            if (_client != null)
+            {
+                int bytesRead;
+                try
+                {
+                    lock (_client.GetStream())
+                    {
+                        // call EndRead to handle the end of an async read.
+                        bytesRead = _client.GetStream().EndRead(ar);
+                    }
+                    // if bytesread<1 -> the client disconnected
+                    if (bytesRead < 1)
+                    {
+                        AllClients.Remove(_clientIP);
+                        Logger.LogUserLogOut("A user has logged out from the server.");
+                        return;
+                    }
+                    else // client still connected
+                    {
+                        byte[] buffer = new byte[bytesRead];
+                        Array.Copy(data, buffer, bytesRead);
+
+                        bytesRead = BitConverter.ToInt32(buffer, 0);
+                        lock (_client.GetStream())
+                        {
+                            // continue reading form the client
+                            _client.GetStream().BeginRead(data, 0, bytesRead, ReceiveMessage, null);
+
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AllClients.Remove(_clientIP);
+                    Logger.LogUserLogOut("A user has logged out from the server.");
+                }
+            }  
+        }
+        public void ReceiveMessage(IAsyncResult ar)
+        {
+            if (_client != null)
+            {
+                int bytesRead;
+                try
+                {
+                    lock (_client.GetStream())
+                    {
+                        // call EndRead to handle the end of an async read.
+                        bytesRead = _client.GetStream().EndRead(ar);
+                    }
+                    // if bytesread<1 -> the client disconnected
+                    if (bytesRead < 1)
+                    {
+                        // remove the client from out list of clients
+                        AllClients.Remove(_clientIP);
+                        Logger.LogUserLogOut("A user has logged out from the server.");
+                        return;
+                    }
+                    else // client still connected
+                    {
+                        string messageReceived = System.Text.Encoding.ASCII.GetString(data, 0, bytesRead);
+                        byte receivedByteSignal = (byte)messageReceived[0];
+                        string actualMessage = messageReceived.Substring(1);
+                        // if the client is sending send me datatable
+                        if (receivedByteSignal == 1)
+                        {
+                            actualMessage = Encryption.Encryption.DecryptData(SymmetricKey, actualMessage);
+                        }
+                        JsonObject jsonObject = JsonConvert.DeserializeObject<JsonObject>(actualMessage, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.Auto,
+                            Binder = new NamespaceAdjustmentBinder(),
+                            Converters = { new EnumConverter<EnumHandler.CommunicationMessageID_Enum>() }
+                        });
+                        EnumHandler.CommunicationMessageID_Enum messageType = (EnumHandler.CommunicationMessageID_Enum)jsonObject.MessageType;
+
+                        switch (messageType)
+                        {
+                            case EnumHandler.CommunicationMessageID_Enum.EncryptionClientPublicKeySender:
+                                HandleEncryptionClientPublicKeySenderEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.loginRequest:
+                                HandleLoginRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.FriendRequestSender:
+                                HandleFriendRequestSenderEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_SmtpRegistrationMessage:
+                                HandleRegistrationRequest_SmtpRegistrationMessageEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_SmtpRegistrationCode:
+                                HandleRegistrationRequest_SmtpRegistrationCodeEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_Registration:
+                                HandleRegistrationRequest_RegistrationEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.UploadProfilePictureRequest:
+                                HandleRegistrationRequest_UploadProfilePictureRequest(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.UploadStatusRequest:
+                                HandleRegistrationRequest_UploadStatusRequest(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.LoginRequest_SmtpLoginCode:
+                                HandleLoginRequest_SmtpLoginCode(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.loginRequest_SmtpLoginMessage:
+                                HandleloginRequest_SmtpLoginMessage(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.CaptchaImageRequest:
+                                HandleCaptchaImageRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.CaptchaCodeRequest:
+                                HandleCaptchaCodeRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.CaptchaImageAngleRequest:
+                                HandleCaptchaImageAngleRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.SendMessageRequest:
+                                HandleSendMessageRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.Disconnect:
+                                HandleDisconnectEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
+                                HandleUdpAudioConnectionRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.PersonalVerificationAnswersRequest:
+                                HandlePersonalVerificationAnswersRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.PasswordUpdateRequest:
+                                HandlePasswordUpdateRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckRequest:
+                                HandleInitialProfileSettingsCheckRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.UserDetailsRequest:
+                                HandleUserDetailsRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.ChatSettingsChangeRequest:
+                                ChatSettings chatSettings = jsonObject.MessageBody as ChatSettings;
+                                byte textSizeProperty = (byte)chatSettings.TextSizeProperty; 
+                                short messageGapProperty = (short)chatSettings.MessageGapProperty;
+                                bool enterKeyPressedProperty = chatSettings.EnterKeyPressedProperty;
+                                if (DataHandler.UpdateChatSettings(_ClientNick,textSizeProperty,messageGapProperty, enterKeyPressedProperty) > 0)
+                                {
+                                    //to send a message saying it was successful...
+
+                                }
+                                break;
+                        }
+                    }
+                    if (isClientConnected)
+                    {
+                        lock (_client.GetStream())
+                        {
+                            // continue reading from the client
+                            //_client.GetStream().BeginRead(data, 0, System.Convert.ToInt32(_client.ReceiveBufferSize), ReceiveMessage, null);
+                            _client.GetStream().BeginRead(data, 0, 4, ReceiveMessageLength, null);
+
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+
+
+                    //Broadcast(_ClientNick + " has left the chat.");
+
+                }
+            }
+           
         }//end R
 
         /// <summary>
@@ -736,7 +1424,7 @@ namespace YouChatServer
         //                    else if (requestNumber == VideoCallRequest)
         //                    {
         //                        string friendName = DecryptedMessageDetails;
-        //                        if ((UserIsConnected(friendName)) && (DataHandler.StatusIsExist(friendName)))
+        //                        if ((UserIsConnected(friendName)) && (DataHandler.StatusIsExist(friendName))) //to check if he is already in a call...
         //                        {
         //                            //establish a udp connection between them two and the server...
         //                            string messageContent = VideoCallResponse2 + "#" + _ClientNick;
@@ -806,7 +1494,133 @@ namespace YouChatServer
         /// <summary>
         /// The SendMessage method sends a message to the connected client
         /// </summary>
-        /// <param name="message">Represents the message the server sends to the connected client</param>
+        /// <param name = "message" > Represents the message the server sends to the connected client</param>
+        public void SendMessage(string jsonMessage, bool needEncryption = true)
+        {
+            if (_client != null)
+            {
+                try
+                {
+                    System.Net.Sockets.NetworkStream ns;
+                    // we use lock to present multiple threads from using the networkstream object
+                    // this is likely to occur when the server is connected to multiple clients all of 
+                    // them trying to access to the networkstram at the same time.
+                    lock (_client.GetStream())
+                    {
+                        ns = _client.GetStream();
+                    }
+
+                    byte signal = needEncryption ? (byte)1 : (byte)0;
+
+                    if (needEncryption)
+                    {
+                        jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
+                    }
+                    string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
+                    Console.WriteLine(messageToSend);
+
+                    // Send data to the client
+                    byte[] bytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
+
+                    // Prefixes 4 Bytes Indicating Message Length
+                    byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
+                    byte[] prefixedBuffer = new byte[bytesToSend.Length + sizeof(int)]; // the maximum size of int number in bytes array
+
+                    Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
+                    Array.Copy(bytesToSend, 0, prefixedBuffer, sizeof(int), bytesToSend.Length); // add the prefix to the message
+
+                    // Actually send it
+
+                    ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+                    ns.Flush();
+                    //ns.Write(bytesToSend, 0, bytesToSend.Length);
+                    //ns.Flush();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+        }//end SendMessage
+
+        //public void SendMessage(string jsonMessage, bool needEncryption = true)
+        //{
+        //    try
+        //    {
+        //        System.Net.Sockets.NetworkStream ns;
+        //        // we use lock to present multiple threads from using the networkstream object
+        //        // this is likely to occur when the server is connected to multiple clients all of 
+        //        // them trying to access to the networkstram at the same time.
+        //        lock (_client.GetStream())
+        //        {
+        //            ns = _client.GetStream();
+        //        }
+
+        //        byte signal = needEncryption ? (byte)1 : (byte)0;
+
+        //        if (needEncryption)
+        //        {
+        //            jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
+        //        }
+        //        string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
+        //        Console.WriteLine(messageToSend);
+
+        //        // Send data to the client
+        //        byte[] totalBytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
+        //        byte[] bytesToSend;
+
+        //        while (totalBytesToSend.Length > 0)
+        //        {
+        //            if (totalBytesToSend.Length > System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)
+        //            {
+        //                bytesToSend = new byte[System.Convert.ToInt32(_client.ReceiveBufferSize) - 4];
+        //                Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4); // to get a fixed size of the prefix to the message
+        //                byte[] buffer = BitConverter.GetBytes(0); //indicates it's not the last message...
+
+        //                byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
+        //                byte[] prefixedBuffer = new byte[bytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
+
+        //                Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
+        //                Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
+
+        //                Array.Copy(bytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), bytesToSend.Length); // add the prefix to the message
+
+        //                // Actually send it
+
+        //                ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+        //                ns.Flush();
+        //                byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)];
+
+        //                Array.Copy(totalBytesToSend, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
+        //                totalBytesToSend = newTotalBytesToSend;
+        //            }
+        //            else
+        //            {
+        //                byte[] buffer = BitConverter.GetBytes(1); //indicates it's the last message...
+
+        //                byte[] length = BitConverter.GetBytes(totalBytesToSend.Length); // the length of the message in byte array
+        //                byte[] prefixedBuffer = new byte[totalBytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
+
+        //                Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
+        //                Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
+
+        //                Array.Copy(totalBytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), totalBytesToSend.Length); // add the prefix to the message
+
+        //                // Actually send it
+
+        //                ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+        //                ns.Flush();
+        //                totalBytesToSend = new byte[0];
+        //            }
+        //        }
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine(ex.ToString());
+        //    }
+        //}//end SendMessage
+
         public void SendMessage(int messageId, string messageContent)
         {
             try

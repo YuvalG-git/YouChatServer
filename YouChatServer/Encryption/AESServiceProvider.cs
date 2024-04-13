@@ -88,6 +88,42 @@ namespace YouChatServer.Encryption
             // Return the encrypted string from the memory stream.
             return encrypted;
         }
+        public static byte[] EncryptToBytes(byte[] plainText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (plainText == null || plainText.Length <= 0)
+                throw new ArgumentNullException("plainText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+            byte[] encrypted;
+
+            // Create an Aes object
+            // with the specified key and IV.
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Key;
+                aesAlg.IV = IV;
+
+                // Create an encryptor to perform the stream transform.
+                ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+
+                // Create the streams used for encryption.
+                using (MemoryStream msEncrypt = new MemoryStream())
+                {
+                    using (CryptoStream csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
+                    {
+                        csEncrypt.Write(plainText, 0, plainText.Length);
+                        csEncrypt.FlushFinalBlock();
+                        encrypted = msEncrypt.ToArray();
+                    }
+                }
+            }
+
+            // Return the encrypted string from the memory stream.
+            return encrypted;
+        }
         /// <summary>
         /// 
         /// </summary>
@@ -123,9 +159,9 @@ namespace YouChatServer.Encryption
                 // Create the streams used for decryption.
                 using (MemoryStream msDecrypt = new MemoryStream(cipherText))
                 {
-                    using (CryptoStream csDecrypt = new CryptoStream((Stream)msDecrypt, decryptor, CryptoStreamMode.Read))
+                    using (CryptoStream csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
                     {
-                        using (StreamReader srDecrypt = new StreamReader((Stream)csDecrypt))
+                        using (StreamReader srDecrypt = new StreamReader(csDecrypt))
                         {
 
                             // Read the decrypted bytes from the decrypting stream
@@ -180,6 +216,86 @@ namespace YouChatServer.Encryption
             }
 
             return plaintext;
+        }
+        public static byte[] DecryptToBytes(string cipherText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (cipherText == null || cipherText.Length <= 0)
+                throw new ArgumentNullException("cipherText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+
+            // Declare the string used to hold
+            // the decrypted text.
+            byte[] plaintextBytes;
+            byte[] buffer = Convert.FromBase64String(cipherText);
+            // Create an Aes object
+            // with the specified key and IV.
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Key;
+                aesAlg.IV = IV;
+
+                // Create a decryptor to perform the stream transform.
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+                // Create the streams used for decryption.
+                using (MemoryStream msDecrypt = new MemoryStream(buffer))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream((Stream)msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (MemoryStream msPlainText = new MemoryStream())
+                        {
+                            csDecrypt.CopyTo(msPlainText);
+                            plaintextBytes = msPlainText.ToArray();
+                        }
+                    }
+                }
+            }
+
+            return plaintextBytes;
+        }
+        public static byte[] Decrypt(byte[] cipherText, byte[] Key, byte[] IV)
+        {
+            // Check arguments.
+            if (cipherText == null || cipherText.Length <= 0)
+                throw new ArgumentNullException("cipherText");
+            if (Key == null || Key.Length <= 0)
+                throw new ArgumentNullException("Key");
+            if (IV == null || IV.Length <= 0)
+                throw new ArgumentNullException("IV");
+
+            // Declare the string used to hold
+            // the decrypted text.
+            byte[] plaintextBytes;
+            byte[] buffer = cipherText;
+            // Create an Aes object
+            // with the specified key and IV.
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = Key;
+                aesAlg.IV = IV;
+
+                // Create a decryptor to perform the stream transform.
+                ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+                // Create the streams used for decryption.
+                using (MemoryStream msDecrypt = new MemoryStream(buffer))
+                {
+                    using (CryptoStream csDecrypt = new CryptoStream((Stream)msDecrypt, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (MemoryStream msPlainText = new MemoryStream())
+                        {
+                            csDecrypt.CopyTo(msPlainText);
+                            plaintextBytes = msPlainText.ToArray();
+                        }
+                    }
+                }
+            }
+
+            return plaintextBytes;
         }
     }
 }

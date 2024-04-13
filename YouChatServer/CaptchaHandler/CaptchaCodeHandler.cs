@@ -8,11 +8,11 @@ using YouChatServer.Properties;
 
 namespace YouChatServer.CaptchaHandler
 {
-    internal class CaptchaCodeHandler //if two users try at the same time will it work?
+    internal class CaptchaCodeHandler 
     {
         private string code;
         private static List<Image> captchaBackground;
-        static CaptchaCodeHandler()
+        public CaptchaCodeHandler()
         {
             captchaBackground = new List<Image>
             {
@@ -34,7 +34,7 @@ namespace YouChatServer.CaptchaHandler
         }
         public Image CreateCatpchaBitmap()
         {
-            code = RandomStringCreator.RandomString(6);
+            code = RandomStringCreator.RandomString(8,true);
             // Create an empty bitmap with a specified width and height
             int width = 200; // Replace with your desired width
             int height = 50; // Replace with your desired height
@@ -50,8 +50,17 @@ namespace YouChatServer.CaptchaHandler
 
                 // Get the random image
                 Image randomImage = captchaBackground[randomIndex];
-                graphics.DrawImage(randomImage, 0, 0, width, height); // Adjust the coordinates and size as needed
+                try
+                {
+                    graphics.DrawImage(randomImage, 0, 0, width, height);
+                }
+                catch (ArgumentException ex)
+                {
+                    // Handle the exception or print a message
+                    Console.WriteLine($"ArgumentException: {ex.Message}");
+                    Console.WriteLine(randomIndex);
 
+                }
                 // Draw text on the bitmap
                 string text = code;
                 Font font = new Font("Lucida Handwriting", 18, FontStyle.Bold);
@@ -63,7 +72,6 @@ namespace YouChatServer.CaptchaHandler
                 graphics.DrawString(text, font, brush, textLocation);
 
                 // Dispose of resources
-                randomImage.Dispose();
                 font.Dispose();
                 brush.Dispose();
             }

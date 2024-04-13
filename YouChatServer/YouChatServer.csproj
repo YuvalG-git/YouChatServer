@@ -66,26 +66,52 @@
   <ItemGroup>
     <Compile Include="CaptchaHandler\CaptchaCodeHandler.cs" />
     <Compile Include="CaptchaHandler\CaptchaRotatingImageHandler.cs" />
+    <Compile Include="CaptchaHandler\CaptchaRotatingImageList.cs" />
+    <Compile Include="Chat.cs" />
     <Compile Include="ChatHandler\ChatCreator.cs" />
     <Compile Include="ChatHistoryHandler.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientAttemptsState.cs" />
+    <Compile Include="ConvertHandler.cs" />
+    <Compile Include="EncryptionExpirationDate.cs" />
     <Compile Include="Encryption\AESServiceProvider.cs" />
     <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\MD5.cs" />
     <Compile Include="Encryption\RSAServiceProvider.cs" />
     <Compile Include="EnumHandler\EnumConverter.cs" />
     <Compile Include="EnumHandler\EnumHandler.cs" />
+    <Compile Include="JsonClasses\CaptchaRotationImageDetails.cs" />
+    <Compile Include="JsonClasses\CaptchaRotationImages.cs" />
+    <Compile Include="JsonClasses\CaptchaRotationSuccessRate.cs" />
+    <Compile Include="JsonClasses\ChatSettings.cs" />
+    <Compile Include="JsonClasses\EncryptionKeys.cs" />
+    <Compile Include="JsonClasses\FriendRequestDetails.cs" />
+    <Compile Include="JsonClasses\ImageContent.cs" />
+    <Compile Include="JsonClasses\Message.cs" />
+    <Compile Include="JsonClasses\PasswordUpdateDetails.cs" />
+    <Compile Include="JsonClasses\PersonalVerificationQuestions.cs" />
+    <Compile Include="JsonClasses\SmtpDetails.cs" />
+    <Compile Include="JsonClasses\PersonalVerificationQuestionDetails.cs" />
+    <Compile Include="JsonClasses\UserDetails.cs" />
+    <Compile Include="NamespaceAdjustmentBinder.cs" />
+    <Compile Include="JsonClasses\JsonObject.cs" />
+    <Compile Include="JsonClasses\LoginDetails.cs" />
     <Compile Include="JsonClasses\PersonalVerificationAnswers.cs" />
     <Compile Include="JsonClasses\RegistrationInformation.cs" />
     <Compile Include="Logger\Logger.cs" />
     <Compile Include="Message.cs" />
+    <Compile Include="PasswordRenewalOptions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\CaptchaBackground.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>CaptchaBackground.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\CaptchaViewImages.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CaptchaViewImages.resx</DependentUpon>
     </Compile>
     <Compile Include="RandomStringCreator.cs" />
     <Compile Include="SmtpHandler.cs" />
@@ -99,6 +125,10 @@
     <EmbeddedResource Include="Properties\CaptchaBackground.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>CaptchaBackground.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\CaptchaViewImages.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>CaptchaViewImages.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -128,6 +158,20 @@
     <None Include="Resources\CaptchaBackground2.png" />
     <None Include="Resources\CaptchaBackground1.jpeg" />
     <None Include="Resources\CaptchaBackground4.png" />
+    <None Include="Resources\View1.jpg" />
+    <None Include="Resources\View2.jpg" />
+    <None Include="Resources\View3.jpg" />
+    <None Include="Resources\View4.jpg" />
+    <None Include="Resources\View5.jpg" />
+    <None Include="Resources\View6.jpg" />
+    <None Include="Resources\View7.jpg" />
+    <None Include="Resources\View8.jpg" />
+    <None Include="Resources\View9.jpg" />
+    <None Include="Resources\View10.jpg" />
+    <None Include="Resources\View11.jpg" />
+    <None Include="Resources\View12.jpg" />
+    <None Include="Resources\View13.jpg" />
+    <None Include="Resources\View14.jpg" />
     <Content Include="UserDetails\UserDetails.mdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

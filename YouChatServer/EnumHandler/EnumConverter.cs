@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace YouChatApp
+namespace YouChatServer
 {
     public class EnumConverter<T> : JsonConverter where T : Enum
     {

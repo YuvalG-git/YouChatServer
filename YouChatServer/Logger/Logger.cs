@@ -20,7 +20,6 @@ namespace YouChatServer
 
         static Logger()
         {
-            Console.WriteLine("f");
             string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
             logDirectory = Path.Combine(projectDirectory, logDirectory);
 
@@ -96,6 +95,11 @@ namespace YouChatServer
         public static void LogUserLogOut(string message)
         {
             Log("LOG OUT", message);
+
+        }
+        public static void LogUserBan(string message)
+        {
+            Log("Ban", message);
 
         }
         public static void LogInfo(string message)

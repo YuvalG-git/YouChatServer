@@ -82,7 +82,8 @@ namespace YouChatServer
                 CountDownTimeSpan = TimeSpan.FromMinutes(CurrentBanDuration);
 
                 Timer.Start();
-                string banMessageContents = Client.BanBeginning + "#" +CurrentBanDuration;
+                string banMessageContents = Client.BanBeginning + "#" + CurrentBanDuration;
+                Logger.LogUserLogOut("A user has been blocked from the server.");
                 Client.SendMessage(Client.BlockBeginning, banMessageContents);
             }
         }

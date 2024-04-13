@@ -81,7 +81,6 @@ namespace YouChatServer.Encryption
                 if (Item < Length)
                     StringBuilder.Append(",");
             }
-
             return StringBuilder.ToString();
         }
     }
