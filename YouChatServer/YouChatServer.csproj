@@ -71,7 +71,11 @@
     <Compile Include="ChatHandler\ChatCreator.cs" />
     <Compile Include="ChatHistoryHandler.cs" />
     <Compile Include="Client.cs" />
-    <Compile Include="ClientAttemptsState.cs" />
+    <Compile Include="ClientAttemptsStateHandler\ClientAttemptsState.cs" />
+    <Compile Include="ClientAttemptsStateHandler\ClientAttemptsStateBase.cs" />
+    <Compile Include="ClientAttemptsStateHandler\ClientCaptchaRotationImagesAttemptsState.cs" />
+    <Compile Include="ClientCaptchaRotationImagesAttemptsState2.cs" />
+    <Compile Include="ClientAttemptsState2.cs" />
     <Compile Include="ConvertHandler.cs" />
     <Compile Include="EncryptionExpirationDate.cs" />
     <Compile Include="Encryption\AESServiceProvider.cs" />
@@ -80,6 +84,7 @@
     <Compile Include="Encryption\RSAServiceProvider.cs" />
     <Compile Include="EnumHandler\EnumConverter.cs" />
     <Compile Include="EnumHandler\EnumHandler.cs" />
+    <Compile Include="JsonClasses\CaptchaRotationBanDetails.cs" />
     <Compile Include="JsonClasses\CaptchaRotationImageDetails.cs" />
     <Compile Include="JsonClasses\CaptchaRotationImages.cs" />
     <Compile Include="JsonClasses\CaptchaRotationSuccessRate.cs" />

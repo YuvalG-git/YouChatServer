@@ -27,9 +27,9 @@ namespace YouChatServer.CaptchaHandler
         { 
             return CaptchaPicturesScore;
         }
-        public int GetAttempts()//returns the current attempt number..
+        public int GetAttempts()
         {
-            return CaptchaPictureAttempts - 1;
+            return CaptchaPictureAttempts;
         }
         public CaptchaRotationImages GetCaptchaRotationImages()
         {
