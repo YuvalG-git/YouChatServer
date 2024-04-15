@@ -278,6 +278,46 @@ namespace YouChatServer.UserDetails
             }
             return TagLine;
         }
+
+        public static bool AreFriends(string Username, string FriendUsername)
+        {
+            try
+            {
+                cmd.Connection = connection;
+                //string sql = "SELECT * FROM UserPastPasswords WHERE Username = '" + Username + "'";
+                string sql = "SELECT * FROM Friends WHERE Username = @Username";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@Username", Username);
+
+                connection.Open();
+                SqlDataReader Reader = cmd.ExecuteReader();
+                while (Reader.Read())
+                {
+                    // Check each column for the desired value
+                    for (int i = 2; i < Reader.FieldCount; i++) //0 - id, 1- username
+                    {
+                        var Value = Reader[i];
+                        if ((Value != DBNull.Value) && (Value != null) && (Value.ToString() == FriendUsername))
+                        {
+                            // The value exists in one of the columns
+                            Reader.Close();
+                            connection.Close();
+                            return true;
+                        }
+                    }
+                }
+                Reader.Close();
+                connection.Close();
+                return false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+        }
         public static int SetUserOnline(string username)
         {
             //set the user online and set the last seen time to now - not must
@@ -433,21 +473,48 @@ namespace YouChatServer.UserDetails
                 return false;
             }
         }
-
-        public static bool IsMatchingUsernameAndEmailAddressExist(string details)
+        public static bool IsFriendRequestPending(string SenderUsername, string ReceiverUsername)
         {
             try
             {
-                string[] data = details.Split('#');
-                string Username = data[0];
-                string Email = data[1];
+                cmd.Connection = connection;
+                string sql = "SELECT COUNT(*) FROM FriendRequest WHERE SenderUsername = @SenderUsername AND ReceiverUsername = @ReceiverUsername AND RequestStatus = 'Pending'";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@SenderUsername", SenderUsername);
+                cmd.Parameters.AddWithValue("@ReceiverUsername", ReceiverUsername);
+
+                connection.Open();
+                int c = (int)cmd.ExecuteScalar();
+                connection.Close();
+                if (c > 0)
+                    return true;
+                else
+                    return false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+            finally
+            {
+                connection.Close(); // Close connection in the finally block
+            }
+        }
+
+        public static bool IsMatchingUsernameAndEmailAddressExist(string Username, string EmailAddress)
+        {
+            try
+            {
                 cmd.Connection = connection;
                 //string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = '" + Username + "' And EmailAddress = '" + Email + "'";
                 string sql = "SELECT COUNT(*) FROM UserDetails WHERE Username = @Username AND EmailAddress = @Email";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", Username);
-                cmd.Parameters.AddWithValue("@Email", Email);
+                cmd.Parameters.AddWithValue("@Email", EmailAddress);
                 connection.Open();
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
@@ -488,80 +555,80 @@ namespace YouChatServer.UserDetails
                 return 0;
             }
         }
-        public static string CheckFriendRequests(string username)
+        //public static string CheckFriendRequests(string username)
+        //{
+        //    StringBuilder FriendRequestSenderUsernames = new StringBuilder();
+        //    string Usernames = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
+        //    // if true i need to send the user a message and then he will add those friend requests to his friend request area...
+        //    try
+        //    {
+        //        cmd.Connection = connection;
+        //        //string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
+        //        string sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = @Username AND RequestStatus = 'Pending'";
+        //        cmd.CommandText = sql;
+        //        cmd.Parameters.Clear(); // Clear previous parameters
+        //        cmd.Parameters.AddWithValue("@Username", username);
+        //        connection.Open();
+        //        SqlDataReader Reader = cmd.ExecuteReader();
+        //        DateTime requestDate = DateTime.Now;
+        //        while (Reader.Read())
+        //        {
+        //            FriendRequestSenderUsernames.Append(Reader["SenderUsername"].ToString());
+        //            FriendRequestSenderUsernames.Append("^");
+        //            requestDate = Convert.ToDateTime(Reader["RequestDate"]); //maybe to create a list or dictonary..
+        //            FriendRequestSenderUsernames.Append(requestDate.ToString());
+
+
+        //            FriendRequestSenderUsernames.Append("#");
+
+        //        }
+        //        if (FriendRequestSenderUsernames.Length > 0)
+        //        {
+        //            FriendRequestSenderUsernames.Length -= 1;
+        //        }
+
+        //        Reader.Close();
+        //        connection.Close();
+        //        username = FriendRequestSenderUsernames.ToString();
+        //        return username;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show(ex.ToString());
+        //        Console.WriteLine(ex.Message);
+        //        return Usernames;
+        //    }
+        //}
+        public static List<PastFriendRequest> CheckFriendRequests(string username)
         {
-            //StringBuilder FriendRequestSenderUsernames = new StringBuilder();
-            //string Usernames = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
-            //// if true i need to send the user a message and then he will add those friend requests to his friend request area...
-            //try
-            //{
-            //    cmd.Connection = connection;
-            //    string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
-            //    connection.Open();
-            //    cmd.CommandText = Sql;
-            //    SqlDataReader Reader = cmd.ExecuteReader();
-            //    while (Reader.Read())
-            //    {
-            //        FriendRequestSenderUsernames.Append(Reader["SenderUsername"].ToString());
-            //        FriendRequestSenderUsernames.Append("#");
-
-            //    }
-            //    if (FriendRequestSenderUsernames.Length > 0)
-            //    {
-            //        FriendRequestSenderUsernames.Length -= 1;
-            //    }
-
-            //    Reader.Close();
-            //    connection.Close();
-            //    username = FriendRequestSenderUsernames.ToString();
-            //    return username;
-            //}
-            //catch (Exception ex)
-            //{
-            //    MessageBox.Show(ex.ToString());
-            //    Console.WriteLine(ex.Message);
-            //    return Usernames;
-            //}
-            StringBuilder FriendRequestSenderUsernames = new StringBuilder();
-            string Usernames = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
-            // if true i need to send the user a message and then he will add those friend requests to his friend request area...
+            List<PastFriendRequest> pastFriendRequests = new List<PastFriendRequest>();
             try
             {
                 cmd.Connection = connection;
-                //string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
                 string sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = @Username AND RequestStatus = 'Pending'";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
                 SqlDataReader Reader = cmd.ExecuteReader();
+                string friendUsername = "";
                 DateTime requestDate = DateTime.Now;
                 while (Reader.Read())
                 {
-                    FriendRequestSenderUsernames.Append(Reader["SenderUsername"].ToString());
-                    FriendRequestSenderUsernames.Append("^");
-                    requestDate = Convert.ToDateTime(Reader["RequestDate"]); //maybe to create a list or dictonary..
-                    FriendRequestSenderUsernames.Append(requestDate.ToString());
-
-
-                    FriendRequestSenderUsernames.Append("#");
-
+                    friendUsername = Reader["SenderUsername"].ToString();
+                    requestDate = Convert.ToDateTime(Reader["RequestDate"]); 
+                    PastFriendRequest pastFriendRequest = new PastFriendRequest(friendUsername,requestDate);
+                    pastFriendRequests.Add(pastFriendRequest);
                 }
-                if (FriendRequestSenderUsernames.Length > 0)
-                {
-                    FriendRequestSenderUsernames.Length -= 1;
-                }
-
                 Reader.Close();
                 connection.Close();
-                username = FriendRequestSenderUsernames.ToString();
-                return username;
+                return pastFriendRequests;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
-                return Usernames;
+                return null;
             }
         }
         public static int HandleFriendRequestStatus(string SenderUsername, string ReceiverUsername, string FriendRequestStatus)

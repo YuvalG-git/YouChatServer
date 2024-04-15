@@ -85,10 +85,14 @@
     <Compile Include="JsonClasses\CaptchaRotationSuccessRate.cs" />
     <Compile Include="JsonClasses\ChatSettings.cs" />
     <Compile Include="JsonClasses\EncryptionKeys.cs" />
+    <Compile Include="JsonClasses\FriendRequestControlDetails.cs" />
+    <Compile Include="JsonClasses\PastFriendRequest.cs" />
     <Compile Include="JsonClasses\FriendRequestDetails.cs" />
+    <Compile Include="JsonClasses\FriendRequestResponseDetails.cs" />
     <Compile Include="JsonClasses\ImageContent.cs" />
     <Compile Include="JsonClasses\Message.cs" />
     <Compile Include="JsonClasses\PasswordUpdateDetails.cs" />
+    <Compile Include="JsonClasses\PastFriendRequests.cs" />
     <Compile Include="JsonClasses\PersonalVerificationQuestions.cs" />
     <Compile Include="JsonClasses\SmtpDetails.cs" />
     <Compile Include="JsonClasses\PersonalVerificationQuestionDetails.cs" />

@@ -1,10 +1,12 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using YouChatServer.JsonClasses;
 
 namespace YouChatServer
 {
@@ -44,7 +46,12 @@ namespace YouChatServer
                 Timer.Stop();
                 //send message ban over.. //until the server sends the message the client will show the time and then waiting... or something like that
                 IsBanned = false;
-                Client.SendMessage(Client.BlockEnding, Client.BanEnding);
+                JsonObject banMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.LoginBanFinish, null);
+                string banMessageJson = JsonConvert.SerializeObject(banMessageJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                Client.SendMessage(banMessageJson);
             }
         }
         public void ResetFailedAttempts()
@@ -52,40 +59,29 @@ namespace YouChatServer
             FailedAttempts = 0;
         }
 
-        //public int DecrementFailedAttempts()
-        //{
-        //    FailedAttempts++;
-        //    if (FailedAttempts >= 5)
-        //    {
-        //        IsBanned = true;
-        //        if (BanDuration.Count > 0)
-        //        {
-        //            CurrentBanDuration = BanDuration.Dequeue();
-        //        }
-        //        CountDownTimeSpan = TimeSpan.FromMinutes(CurrentBanDuration);
-
-        //        Timer.Start();
-        //    }
-        //    return Math.Max(0, 5 - FailedAttempts);
-        //}
-        public void HandleFailedAttempt() // i can replace this by doing it as a bool method that will return true if the timer should start and if yes it will start manage that in client class
+        public void HandleBan() // i can replace this by doing it as a bool method that will return true if the timer should start and if yes it will start manage that in client class
             // this way i wont need to send an instance of the client object in the constractor
         {
+            IsBanned = true;
+            if (BanDuration.Count > 0)
+            {
+                CurrentBanDuration = BanDuration.Dequeue();
+            }
+            CountDownTimeSpan = TimeSpan.FromMinutes(CurrentBanDuration);
+
+            Timer.Start();
+        }
+        public void HandleFailedAttempt()
+        {
             FailedAttempts++;
+        }
+        public bool IsUserBanned()
+        {
             if (FailedAttempts >= 5)
             {
-                IsBanned = true;
-                if (BanDuration.Count > 0)
-                {
-                    CurrentBanDuration = BanDuration.Dequeue();
-                }
-                CountDownTimeSpan = TimeSpan.FromMinutes(CurrentBanDuration);
-
-                Timer.Start();
-                string banMessageContents = Client.BanBeginning + "#" + CurrentBanDuration;
-                Logger.LogUserLogOut("A user has been blocked from the server.");
-                Client.SendMessage(Client.BlockBeginning, banMessageContents);
+               return true;
             }
+            return false;
         }
     }
 }

@@ -41,7 +41,7 @@ namespace YouChatServer
         public static Dictionary<string, Chat> AllChats = new Dictionary<string, Chat>();
 
         //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
-        private Dictionary<IPAddress, ClientAttemptsState> _clientFailedAttempts = new Dictionary<IPAddress, ClientAttemptsState>(); 
+        private Dictionary<IPAddress, ClientAttemptsState> _clientFailedAttempts = new Dictionary<IPAddress, ClientAttemptsState>();
 
         public static List<Client> clientsList = new List<Client>();
 
@@ -279,11 +279,11 @@ namespace YouChatServer
             captchaCodeHandler = new CaptchaCodeHandler();
             captchaRotatingImageHandler = new CaptchaRotatingImageHandler();
         }
-        
+
         public static string RandomKey(int Length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string (Enumerable.Repeat(chars, Length).Select(s => s[Random.Next(s.Length)]).ToArray());
+            return new string(Enumerable.Repeat(chars, Length).Select(s => s[Random.Next(s.Length)]).ToArray());
         }
         private void HandleEncryptionClientPublicKeySenderEnum(JsonObject jsonObject)
         {
@@ -336,7 +336,7 @@ namespace YouChatServer
                 if (emailAddress != "")
                 {
                     smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
-                    JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage,null);
+                    JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage, null);
                     string smtpLoginMessageJson = JsonConvert.SerializeObject(smtpLoginMessageJsonObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.Auto
@@ -361,7 +361,22 @@ namespace YouChatServer
                     clientAttemptsState = _clientFailedAttempts[_clientAddress];
                 }
                 clientAttemptsState.HandleFailedAttempt();
-                SendFailedLoginMessage();
+                if (clientAttemptsState.IsUserBanned())
+                {
+                    clientAttemptsState.HandleBan();
+                    Logger.LogUserLogOut("A user has been blocked from the server.");
+                    double banDuration = clientAttemptsState.CurrentBanDuration;
+                    JsonObject banMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.LoginBanStart, banDuration);
+                    string banMessageJson = JsonConvert.SerializeObject(banMessageJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(banMessageJson);
+                }
+                else
+                {
+                    SendFailedLoginMessage();
+                }
             }
         }
         private void HandleloginRequest_SmtpLoginMessage(JsonObject jsonObject)
@@ -388,6 +403,25 @@ namespace YouChatServer
             });
             SendMessage(smtpRegistrationCodeResponseJson);
         }
+        private void HandleResetPasswordRequest_SmtpCodeEnum(JsonObject jsonObject)
+        {
+            string code = jsonObject.MessageBody as string;
+            EnumHandler.CommunicationMessageID_Enum SmtpResetPasswordCodeResponseEnum;
+            if (smtpHandler.GetSmtpCode() == code)
+            {
+                SmtpResetPasswordCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulResetPasswordResponse_SmtpCode;
+            }
+            else
+            {
+                SmtpResetPasswordCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.FailedResetPasswordResponse_SmtpCode;
+            }
+            JsonObject smtpResetPasswordCodeResponseJsonObject = new JsonObject(SmtpResetPasswordCodeResponseEnum, null);
+            string smtpResetPasswordCodeResponseJson = JsonConvert.SerializeObject(smtpResetPasswordCodeResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(smtpResetPasswordCodeResponseJson);
+        }
 
         private void HandleFriendRequestSenderEnum(JsonObject jsonObject) //todo - not finished...
         {
@@ -400,32 +434,97 @@ namespace YouChatServer
             {
                 if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(FriendRequestReceiverUsername, FriendRequestReceiverTagLine)) //if it's wrong i chose not to inform because he shouldnt know if there wasn't a client like that (this way he could find other clients...)
                 {
-                    //ask friend request..
-                    if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
+                    if (!DataHandler.AreFriends(FriendRequestSenderUsername, FriendRequestReceiverUsername))
                     {
-                        //was successful
-                        string emailAddress = DataHandler.GetEmailAddress(FriendRequestReceiverUsername);
-                        //todo - check if it works...
-                        smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress); //sends if he is offline so he know and if he is online so he will know to look there...
-
-                        //to check if he is online...
-                        if (UserIsConnected(FriendRequestReceiverUsername))
+                        if (DataHandler.IsFriendRequestPending(FriendRequestSenderUsername, FriendRequestReceiverUsername)) //user already send one
                         {
-                            string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
-                            if (profilePicture != "")
+
+                        }
+                        else if (DataHandler.IsFriendRequestPending(FriendRequestReceiverUsername, FriendRequestSenderUsername)) //the other user already send to you
+                        {
+                            //handle accept request...
+                            HandleFriendRequestResponse(FriendRequestReceiverUsername, FriendRequestSenderUsername, FriendRequestResponseSender1);
+                        }
+                        else
+                        {
+                            if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
                             {
-                                string userDetails = FriendRequestSenderUsername + "^" + profilePicture;
-                                Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
-                                                                                                            //need to handle when logging in if there were message request sent before...
+                                //was successful
+                                string emailAddress = DataHandler.GetEmailAddress(FriendRequestReceiverUsername);
+                                //todo - check if it works...
+                                smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress); //sends if he is offline so he know and if he is online so he will know to look there...
+
+                                //to check if he is online...
+                                if (UserIsConnected(FriendRequestReceiverUsername))
+                                {
+                                    string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
+                                    if (profilePicture != "")
+                                    {
+                                        FriendRequestControlDetails friendRequestControlDetails = new FriendRequestControlDetails(FriendRequestSenderUsername, profilePicture);
+                                        JsonObject friendRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestReciever, friendRequestControlDetails);
+                                        string friendRequestJson = JsonConvert.SerializeObject(friendRequestJsonObject, new JsonSerializerSettings
+                                        {
+                                            TypeNameHandling = TypeNameHandling.Auto
+                                        });
+                                        Unicast(friendRequestJson, FriendRequestReceiverUsername);
+                                         //todo - need to handle in the client side how it will work
+                                         //need to handle when logging in if there were message request sent before...
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
                             }
                         }
                     }
                     else
                     {
-                        //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
+                        //currently friends...
                     }
-
                 }
+            }
+        }
+        private void HandleFriendRequestResponseSenderEnum(JsonObject jsonObject) //todo - not finished...
+        {
+            FriendRequestResponseDetails friendRequestResponseDetails = jsonObject.MessageBody as FriendRequestResponseDetails;
+            string FriendRequestSenderUsername = friendRequestResponseDetails.Username;
+            string FriendRequestReceiverUsername = _ClientNick;
+            string FriendRequestStatus = friendRequestResponseDetails.Status;
+            HandleFriendRequestResponse(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus);
+        }
+        private void HandleFriendRequestResponse(string FriendRequestSenderUsername, string FriendRequestReceiverUsername, string FriendRequestStatus)
+        {
+            if (DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
+            {
+                if (FriendRequestStatus == FriendRequestResponseSender1)
+                {
+                    if ((DataHandler.CheckFullFriendsCapacity(FriendRequestSenderUsername)) || (DataHandler.CheckFullFriendsCapacity(FriendRequestReceiverUsername)))
+                    {
+                        DataHandler.AddColumnToFriends();
+                    }
+                    if (DataHandler.AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0) //one worked...
+                    {
+                        if (DataHandler.AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername) > 0) //both worked...
+                        {
+                            JsonObject friendRequestResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, null);
+                            string friendRequestResponseJson = JsonConvert.SerializeObject(friendRequestResponseJsonObject, new JsonSerializerSettings
+                            {
+                                TypeNameHandling = TypeNameHandling.Auto
+                            });
+                            Unicast(friendRequestResponseJson, FriendRequestSenderUsername);
+                        }
+                    }
+                    //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
+                }
+                else if (FriendRequestStatus == FriendRequestResponseSender2)
+                {
+                    // doesn't really need to do something... maybe in the future i will think abt something
+                }
+            }
+            else
+            {
+                //was an error...
             }
         }
         private void HandleRegistrationRequest_SmtpRegistrationMessageEnum(JsonObject jsonObject) 
@@ -435,6 +534,19 @@ namespace YouChatServer
             string emailAddress = userUsernameAndEmailAddress.EmailAddress;
             smtpHandler.SendCodeToUserEmail(username,emailAddress,EnumHandler.SmtpMessageType_Enum.RegistrationMessage);
             JsonObject SentEmailNotificationJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SmtpRegistrationMessage, null);
+            string SentEmailNotificationJson = JsonConvert.SerializeObject(SentEmailNotificationJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(SentEmailNotificationJson);
+        }
+        private void HandleResetPasswordRequest_SmtpMessageEnum(JsonObject jsonObject)
+        {
+            SmtpDetails userUsernameAndEmailAddress = jsonObject.MessageBody as SmtpDetails;
+            string username = userUsernameAndEmailAddress.Username;
+            string emailAddress = userUsernameAndEmailAddress.EmailAddress;
+            smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.PasswordRenewalMessage);
+            JsonObject SentEmailNotificationJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ResetPasswordResponse_SmtpMessage, null);
             string SentEmailNotificationJson = JsonConvert.SerializeObject(SentEmailNotificationJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
@@ -641,10 +753,20 @@ namespace YouChatServer
                 EnumHandler.CommunicationMessageID_Enum successfulPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.SuccessfulPasswordUpdateResponse;
                 EnumHandler.CommunicationMessageID_Enum failedPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.FailedPasswordUpdateResponse_PasswordExist;
                 EnumHandler.CommunicationMessageID_Enum errorPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.ErrorHandlePasswordUpdateResponse;
-
                 PasswordRenewalOptions passwordRenewalOptions = new PasswordRenewalOptions(successfulPasswordRenewal, failedPasswordRenewal, errorPasswordRenewal);
                 HandlePasswordRenewal(username,newPassword, passwordRenewalOptions);
             }
+        }
+        private void HandlePasswordRenewalMessageRequestEnum(JsonObject jsonObject)
+        {
+            LoginDetails passwordRenewalDetails = jsonObject.MessageBody as LoginDetails;
+            string username = passwordRenewalDetails.Username;
+            string newPassword = passwordRenewalDetails.Password;
+            EnumHandler.CommunicationMessageID_Enum successfulPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.SuccessfulRenewalMessageResponse;
+            EnumHandler.CommunicationMessageID_Enum failedPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.FailedRenewalMessageResponse;
+            EnumHandler.CommunicationMessageID_Enum errorPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.ErrorHandleRenewalMessageResponse;
+            PasswordRenewalOptions passwordRenewalOptions = new PasswordRenewalOptions(successfulPasswordRenewal, failedPasswordRenewal, errorPasswordRenewal);
+            HandlePasswordRenewal(username, newPassword, passwordRenewalOptions);
         }
         private void HandlePasswordRenewal(string username, string password, PasswordRenewalOptions passwordRenewalOptions)
         {
@@ -831,6 +953,52 @@ namespace YouChatServer
                 SendMessage(captchaCodeResponseJson);
             }
         }
+        private void HandleResetPasswordRequestEnum(JsonObject jsonObject)
+        {
+            SmtpDetails smtpDetails = jsonObject.MessageBody as SmtpDetails;
+            string username = smtpDetails.Username;
+            string emailAddress = smtpDetails.EmailAddress;
+            EnumHandler.CommunicationMessageID_Enum resetPasswordResponse;
+            if (DataHandler.IsMatchingUsernameAndEmailAddressExist(username, emailAddress))
+            {
+                smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.PasswordRenewalMessage);
+                resetPasswordResponse = EnumHandler.CommunicationMessageID_Enum.SuccessfulResetPasswordResponse;
+            }
+            else
+            {
+                resetPasswordResponse = EnumHandler.CommunicationMessageID_Enum.FailedResetPasswordResponse;
+            }
+            JsonObject resetPasswordResponseJsonObject = new JsonObject(resetPasswordResponse, null);
+            string resetPasswordResponseJson = JsonConvert.SerializeObject(resetPasswordResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(resetPasswordResponseJson);
+        }
+        private void HandlePastFriendRequestsRequestEnum(JsonObject jsonObject)
+        {
+            List<PastFriendRequest> friendRequests = DataHandler.CheckFriendRequests(_ClientNick);
+            if (friendRequests != null)
+            {
+                string name;
+                foreach (PastFriendRequest pastFriendRequest in friendRequests)
+                {
+                    name = pastFriendRequest.Username;
+                    string profilePicture = DataHandler.GetProfilePicture(name);
+                    if (profilePicture != "")
+                    {
+                        pastFriendRequest.ProfilePicture = profilePicture;
+                    }
+                }
+            }
+            PastFriendRequests pastFriendRequests = new PastFriendRequests(friendRequests);
+            JsonObject pastFriendRequestsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.PastFriendRequestsResponse, pastFriendRequests);
+            string pastFriendRequestsJson = JsonConvert.SerializeObject(pastFriendRequestsJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(pastFriendRequestsJson);
+        }
 
         private void ReceiveMessageLength(IAsyncResult ar)
         {
@@ -980,8 +1148,26 @@ namespace YouChatServer
                                 if (DataHandler.UpdateChatSettings(_ClientNick,textSizeProperty,messageGapProperty, enterKeyPressedProperty) > 0)
                                 {
                                     //to send a message saying it was successful...
-
                                 }
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseSender:
+                                HandleFriendRequestResponseSenderEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest:
+                                HandleResetPasswordRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest_SmtpCode:
+                                HandleResetPasswordRequest_SmtpCodeEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest_SmtpMessage:
+                                HandleResetPasswordRequest_SmtpMessageEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.PastFriendRequestsRequest:
+                                HandlePastFriendRequestsRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.PasswordRenewalMessageRequest:
+                                HandlePasswordRenewalMessageRequestEnum(jsonObject);
+
                                 break;
                         }
                     }
@@ -998,10 +1184,7 @@ namespace YouChatServer
                 }
                 catch (Exception ex)
                 {
-
-
                     //Broadcast(_ClientNick + " has left the chat.");
-
                 }
             }
            
@@ -1543,6 +1726,17 @@ namespace YouChatServer
             }
         }//end SendMessage
 
+        public void Unicast(string jsonMessage, string UserID, bool needEncryption = true)
+        {
+            foreach (DictionaryEntry c in AllClients)
+            {
+                if (((Client)(c.Value))._ClientNick == UserID) //בעתיד להחליף clientnick במשתנה של userid
+                {
+                    ((Client)(c.Value)).SendMessage(jsonMessage, needEncryption);
+                }
+            }
+        }
+
         //public void SendMessage(string jsonMessage, bool needEncryption = true)
         //{
         //    try
@@ -1721,7 +1915,7 @@ namespace YouChatServer
         {
             foreach (DictionaryEntry c in AllClients)
             {
-                if (((Client)(c.Value))._ClientNick == username)
+                if (((Client)(c.Value))._ClientNick == username) //לבדוק גם אם הוא online...
                     return true;
             }
             return false;

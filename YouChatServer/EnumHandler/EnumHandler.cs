@@ -46,6 +46,9 @@ namespace YouChatServer
             EncryptionSymmetricKeyReciever,
             EncryptionRenewKeys,
             FriendRequestSender,
+            FriendRequestReciever,
+            FriendRequestResponseSender,
+            FriendRequestResponseReciever,
             UploadProfilePictureRequest,
             UploadProfilePictureResponse,
             UploadStatusRequest,
@@ -84,7 +87,23 @@ namespace YouChatServer
             UserDetailsRequest,
             UserDetailsResponse,
             ChatSettingsChangeRequest,
-            ChatSettingsChangeResponse
+            ChatSettingsChangeResponse,
+            LoginBanStart,
+            LoginBanFinish,
+            ResetPasswordRequest,
+            SuccessfulResetPasswordResponse,
+            FailedResetPasswordResponse,
+            ResetPasswordRequest_SmtpMessage,
+            ResetPasswordResponse_SmtpMessage,
+            ResetPasswordRequest_SmtpCode,
+            SuccessfulResetPasswordResponse_SmtpCode,
+            FailedResetPasswordResponse_SmtpCode,
+            PastFriendRequestsRequest,
+            PastFriendRequestsResponse,
+            PasswordRenewalMessageRequest,
+            SuccessfulRenewalMessageResponse,
+            FailedRenewalMessageResponse,
+            ErrorHandleRenewalMessageResponse
         }
     }
 }
