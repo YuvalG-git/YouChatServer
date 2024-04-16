@@ -24,6 +24,11 @@ namespace YouChatServer
             LoginMessage,
             PasswordRenewalMessage,
         }
+        public enum ChatType_Enum
+        {
+            DirectChat,
+            GroupChat
+        }
         public enum CommunicationMessageID_Enum
         {
             loginRequest,
@@ -36,7 +41,8 @@ namespace YouChatServer
             RegistrationRequest_SmtpRegistrationMessage,
             RegistrationResponse_SmtpRegistrationMessage,
             RegistrationRequest_SmtpRegistrationCode,
-            RegistrationResponse_SmtpRegistrationCode,
+            RegistrationResponse_SuccessfulSmtpRegistrationCode,
+            RegistrationResponse_FailedSmtpRegistrationCode,
             RegistrationRequest_Registration,
             RegistrationResponse_SuccessfulRegistration,
             RegistrationResponse_FailedRegistration,
@@ -94,8 +100,8 @@ namespace YouChatServer
             RegistrationBanFinish,
             ResetPasswordBanStart,
             ResetPasswordBanFinish,
-            PasswordUpdateStart,
-            PasswordUpdateFinish,
+            PasswordUpdateBanStart,
+            PasswordUpdateBanFinish,
             ResetPasswordRequest,
             SuccessfulResetPasswordResponse,
             FailedResetPasswordResponse,

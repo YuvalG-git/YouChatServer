@@ -11,11 +11,13 @@ namespace YouChatServer
     {
         private XmlFileManager _FileManager;
         private Hashtable _chatClients;
+        private EnumHandler.ChatType_Enum _chatType;
 
-        public Chat(XmlFileManager fileManager, Hashtable chatClients)
+        public Chat(XmlFileManager fileManager, Hashtable chatClients, EnumHandler.ChatType_Enum chatType)
         {
             _FileManager = fileManager;
             _chatClients = chatClients;
+            _chatType = chatType;
         }
         public XmlFileManager FileManager
         {

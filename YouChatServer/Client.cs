@@ -42,13 +42,20 @@ namespace YouChatServer
         public static Dictionary<string, Chat> AllChats = new Dictionary<string, Chat>();
 
         //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
-        private Dictionary<IPEndPoint, ClientAttemptsState> _clientLoginFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-        private Dictionary<IPEndPoint, ClientAttemptsState> _clientRegistrationFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-        private Dictionary<IPEndPoint, ClientAttemptsState> _clientPasswordUpdateFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-        private Dictionary<IPEndPoint, ClientAttemptsState> _clientPasswordResetFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
+        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientLoginFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
+        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientRegistrationFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
+        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientPasswordUpdateFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
+        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientPasswordResetFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
 
-        private Dictionary<IPEndPoint, ClientCaptchaRotationImagesAttemptsState> _clientCaptchaRotationImagesAttemptsState = new Dictionary<IPEndPoint, ClientCaptchaRotationImagesAttemptsState>();
+        //private Dictionary<IPEndPoint, ClientCaptchaRotationImagesAttemptsState> _clientCaptchaRotationImagesAttemptsState = new Dictionary<IPEndPoint, ClientCaptchaRotationImagesAttemptsState>();
+        private ClientAttemptsState _LoginFailedAttempts;
+        private ClientAttemptsState _RegistrationFailedAttempts;
+        private ClientAttemptsState _RegistrationSmtpFailedAttempts;
 
+        private ClientAttemptsState _PasswordUpdateFailedAttempts;
+        private ClientAttemptsState _PasswordResetFailedAttempts;
+
+        private ClientCaptchaRotationImagesAttemptsState _captchaRotationImagesAttemptsState;
         public static List<Client> clientsList = new List<Client>();
 
 
@@ -284,9 +291,9 @@ namespace YouChatServer
             encryptionExpirationDate = new EncryptionExpirationDate(this);
             captchaCodeHandler = new CaptchaCodeHandler();
             captchaRotatingImageHandler = new CaptchaRotatingImageHandler();
-
-            ClientAttemptsState clientAttemptsState = null;
-            InitializeClientAttemptsStateObject(ref clientAttemptsState);
+            _LoginFailedAttempts = new ClientAttemptsState(this,EnumHandler.UserAuthentication_Enum.Login);
+            //ClientAttemptsState clientAttemptsState = null;
+            //InitializeClientAttemptsStateObject(ref clientAttemptsState);
 
         }
         public CaptchaRotatingImageHandler GetCaptchaRotatingImageHandler()
@@ -350,8 +357,9 @@ namespace YouChatServer
                 if (emailAddress != "")
                 {
                     smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
-                    ClientAttemptsState clientAttemptsState = null;
-                    InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                    //ClientAttemptsState clientAttemptsState = null;
+                    //InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                    _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
                     JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage, null);
                     string smtpLoginMessageJson = JsonConvert.SerializeObject(smtpLoginMessageJsonObject, new JsonSerializerSettings
                     {
@@ -366,8 +374,9 @@ namespace YouChatServer
             }
             else
             {
-                ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
-                HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedLoginMessage);
+                //ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
+                //HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedLoginMessage);
+                HandleFailedAttempt(_LoginFailedAttempts, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedLoginMessage);
             }
         }
         private void HandleFailedAttempt(ClientAttemptsState clientAttemptsState, EnumHandler.CommunicationMessageID_Enum BanStart, Action FailedAttempt)
@@ -390,24 +399,24 @@ namespace YouChatServer
                 FailedAttempt();
             }
         }
-        private ClientAttemptsState GetClientAttemptsStateObject()
-        {
-            ClientAttemptsState clientAttemptsState = null;
-            if (!_clientLoginFailedAttempts.ContainsKey(_clientIPEndPoint)) //shouldnt enter but for saftey...
-            {
-                InitializeClientAttemptsStateObject(ref clientAttemptsState);
-            }
-            else
-            {
-                clientAttemptsState = _clientLoginFailedAttempts[_clientIPEndPoint];
-            }
-            return clientAttemptsState;
-        }
-        private void InitializeClientAttemptsStateObject(ref ClientAttemptsState clientAttemptsState)
-        {
-            clientAttemptsState = new ClientAttemptsState(this);
-            _clientLoginFailedAttempts[_clientIPEndPoint] = clientAttemptsState;
-        }
+        //private ClientAttemptsState GetClientAttemptsStateObject()
+        //{
+        //    ClientAttemptsState clientAttemptsState = null;
+        //    if (!_clientLoginFailedAttempts.ContainsKey(_clientIPEndPoint)) //shouldnt enter but for saftey...
+        //    {
+        //        InitializeClientAttemptsStateObject(ref clientAttemptsState);
+        //    }
+        //    else
+        //    {
+        //        clientAttemptsState = _clientLoginFailedAttempts[_clientIPEndPoint];
+        //    }
+        //    return clientAttemptsState;
+        //}
+        //private void InitializeClientAttemptsStateObject(ref ClientAttemptsState clientAttemptsState)
+        //{
+        //    clientAttemptsState = new ClientAttemptsState(this);
+        //    _clientLoginFailedAttempts[_clientIPEndPoint] = clientAttemptsState;
+        //}
         private void HandleloginRequest_SmtpLoginMessage(JsonObject jsonObject)
         {
             string username = jsonObject.MessageBody as string;
@@ -424,8 +433,29 @@ namespace YouChatServer
         private void HandleRegistrationRequest_SmtpRegistrationCodeEnum(JsonObject jsonObject)
         {
             string code = jsonObject.MessageBody as string;
-            string codeResponse = (smtpHandler.GetSmtpCode() == code) ? RightSmtpCode : WrongSmtpCode;
-            JsonObject smtpRegistrationCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SmtpRegistrationCode, codeResponse);
+            if (smtpHandler.GetSmtpCode() == code)
+            {
+                _RegistrationSmtpFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Registration);
+                JsonObject smtpRegistrationCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SuccessfulSmtpRegistrationCode, null);
+                string smtpRegistrationCodeResponseJson = JsonConvert.SerializeObject(smtpRegistrationCodeResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(smtpRegistrationCodeResponseJson);
+            }
+            else
+            {
+                if (_RegistrationSmtpFailedAttempts == null)
+                {
+                    _RegistrationSmtpFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Registration);
+                }
+                HandleFailedAttempt(_RegistrationSmtpFailedAttempts, EnumHandler.CommunicationMessageID_Enum.RegistrationBanStart, SendFailedSmtpRegistrationCode);
+            }
+
+        }
+        private void SendFailedSmtpRegistrationCode()
+        {
+            JsonObject smtpRegistrationCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_FailedSmtpRegistrationCode, null);
             string smtpRegistrationCodeResponseJson = JsonConvert.SerializeObject(smtpRegistrationCodeResponseJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
@@ -598,11 +628,14 @@ namespace YouChatServer
             string dateOfBirthAsString = dateOfBirth.ToString("yyyy-MM-dd");
             string registrationDateAsString = registrationDate.ToString("yyyy-MM-dd");
 
-            EnumHandler.CommunicationMessageID_Enum RegistrationResponseEnum;
             if (!UserDetails.DataHandler.usernameIsExist(username) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
             {
+                EnumHandler.CommunicationMessageID_Enum RegistrationResponseEnum;
                 if (UserDetails.DataHandler.InsertUser(username,password,firstName,lastName,emailAddress,cityName,gender,dateOfBirthAsString,registrationDateAsString,VerificationQuestionsAndAnswers) > 0)
                 {
+                    _RegistrationFailedAttempts = null;
+                    _RegistrationSmtpFailedAttempts = null;
+
                     _ClientNick = username;
                     RegistrationResponseEnum = EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SuccessfulRegistration;
                 }
@@ -610,12 +643,27 @@ namespace YouChatServer
                 {
                     RegistrationResponseEnum = EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_FailedRegistration;
                 }
+                JsonObject RegistrationResponseJsonObject = new JsonObject(RegistrationResponseEnum, null);
+                string RegistrationResponseJson = JsonConvert.SerializeObject(RegistrationResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(RegistrationResponseJson);
             }
             else//if regist not ok
             {
-                RegistrationResponseEnum = EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_FailedRegistration;
+
+                if (_RegistrationFailedAttempts == null)
+                {
+                    _RegistrationFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Registration);
+                }
+                HandleFailedAttempt(_RegistrationFailedAttempts, EnumHandler.CommunicationMessageID_Enum.RegistrationBanStart, SendFailedRegistration);
             }
-            JsonObject RegistrationResponseJsonObject = new JsonObject(RegistrationResponseEnum, null);
+
+        }
+        private void SendFailedRegistration()
+        {
+            JsonObject RegistrationResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_FailedRegistration, null);
             string RegistrationResponseJson = JsonConvert.SerializeObject(RegistrationResponseJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
@@ -667,8 +715,9 @@ namespace YouChatServer
                 Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
                 byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
                 ImageContent imageContent = new ImageContent(bytes);
-                ClientAttemptsState clientAttemptsState = null;
-                InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                //ClientAttemptsState clientAttemptsState = null;
+                //InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
                 JsonObject smtpLoginCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.LoginResponse_SuccessfulSmtpLoginCode, imageContent);
                 string smtpLoginCodeResponseJson = JsonConvert.SerializeObject(smtpLoginCodeResponseJsonObject, new JsonSerializerSettings
                 {
@@ -678,8 +727,9 @@ namespace YouChatServer
             }    
             else
             {
-                ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
-                HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedLoginSmtpCode);
+                //ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
+                //HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedLoginSmtpCode);
+                HandleFailedAttempt(_LoginFailedAttempts, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedLoginSmtpCode);
             }
         }
         private void SendFailedLoginSmtpCode()
@@ -741,8 +791,10 @@ namespace YouChatServer
             if (captchaCodeHandler.CompareCode(code))
             {
                 CaptchaRotationImageDetails captchaRotationImageDetails = GetCaptchaRotationImageDetails();
-                ClientAttemptsState clientAttemptsState = null;
-                InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                //ClientAttemptsState clientAttemptsState = null;
+                //InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
+
                 JsonObject captchaCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulCaptchaCodeResponse, captchaRotationImageDetails);
                 string captchaCodeResponseJson = JsonConvert.SerializeObject(captchaCodeResponseJsonObject, new JsonSerializerSettings
                 {
@@ -752,8 +804,10 @@ namespace YouChatServer
             }
             else
             {
-                ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
-                HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedCaptchaCode);
+                //ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
+                //HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedCaptchaCode);
+                HandleFailedAttempt(_LoginFailedAttempts, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SendFailedCaptchaCode);
+
             }
         }
         private void SendFailedCaptchaCode()
@@ -779,12 +833,12 @@ namespace YouChatServer
             string newPassword = passwordUpdateDetails.NewPassword;
             if (!DataHandler.isMatchingUsernameAndPasswordExist(username, pastPassword)) 
             {
-                JsonObject passwordRenewalJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedPasswordUpdateResponse_UnmatchedDetails, null);
-                string passwordRenewalJson = JsonConvert.SerializeObject(passwordRenewalJsonObject, new JsonSerializerSettings
+                if (_PasswordUpdateFailedAttempts == null)
                 {
-                    TypeNameHandling = TypeNameHandling.Auto
-                });
-                SendMessage(passwordRenewalJson);
+                    _PasswordUpdateFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordUpdate);
+                }
+                HandleFailedAttempt(_PasswordUpdateFailedAttempts, EnumHandler.CommunicationMessageID_Enum.PasswordUpdateBanStart, SendUnmatchedDetailsPasswordUpdateResponse);
+
                 //past password not matching..
             }
             else           
@@ -794,7 +848,17 @@ namespace YouChatServer
                 EnumHandler.CommunicationMessageID_Enum errorPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.ErrorHandlePasswordUpdateResponse;
                 PasswordRenewalOptions passwordRenewalOptions = new PasswordRenewalOptions(successfulPasswordRenewal, failedPasswordRenewal, errorPasswordRenewal);
                 HandlePasswordRenewal(username,newPassword, passwordRenewalOptions);
+                _PasswordUpdateFailedAttempts = null;
             }
+        }
+        private void SendUnmatchedDetailsPasswordUpdateResponse()
+        {
+            JsonObject passwordRenewalJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedPasswordUpdateResponse_UnmatchedDetails, null);
+            string passwordRenewalJson = JsonConvert.SerializeObject(passwordRenewalJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(passwordRenewalJson);
         }
         private void HandlePasswordRenewalMessageRequestEnum(JsonObject jsonObject)
         {
@@ -910,8 +974,9 @@ namespace YouChatServer
 
             if (DataHandler.CheckUserVerificationInformation(_ClientNick, personalVerificationAnswers))
             {
-                ClientAttemptsState clientAttemptsState = null;
-                InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                //ClientAttemptsState clientAttemptsState = null;
+                //InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
                 if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
                 {
                     PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_UpdatePassword;
@@ -944,8 +1009,10 @@ namespace YouChatServer
             }
             else
             {
-                ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
-                HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SetFailedPersonalVerificationAnswers);
+                //ClientAttemptsState clientAttemptsState = GetClientAttemptsStateObject();
+                //HandleFailedAttempt(clientAttemptsState, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SetFailedPersonalVerificationAnswers);
+                HandleFailedAttempt(_LoginFailedAttempts, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, SetFailedPersonalVerificationAnswers);
+
             }
         }
         private void SetFailedPersonalVerificationAnswers()
@@ -965,8 +1032,9 @@ namespace YouChatServer
             {
                 if (captchaRotatingImageHandler.CheckSuccess())
                 {
-                    ClientAttemptsState clientAttemptsState = null;
-                    InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                    //ClientAttemptsState clientAttemptsState = null;
+                    //InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                    _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
                     string[] userVerificationQuestions = DataHandler.GetUserVerificationQuestions(_ClientNick);
                     string userVerificationQuestion1 = userVerificationQuestions[0];
                     string userVerificationQuestion2 = userVerificationQuestions[1];
@@ -987,20 +1055,14 @@ namespace YouChatServer
                 }
                 else
                 {
-                    ClientCaptchaRotationImagesAttemptsState clientCaptchaRotationImagesAttemptsState;
-                    if (!_clientCaptchaRotationImagesAttemptsState.ContainsKey(_clientIPEndPoint)) 
+                    if (_captchaRotationImagesAttemptsState == null)
                     {
-                        clientCaptchaRotationImagesAttemptsState = new ClientCaptchaRotationImagesAttemptsState(this);
-                        _clientCaptchaRotationImagesAttemptsState[_clientIPEndPoint] = clientCaptchaRotationImagesAttemptsState;
-                    }
-                    else
-                    {
-                        clientCaptchaRotationImagesAttemptsState = _clientCaptchaRotationImagesAttemptsState[_clientIPEndPoint];
+                        _captchaRotationImagesAttemptsState = new ClientCaptchaRotationImagesAttemptsState(this);
                     }
                     int score = captchaRotatingImageHandler.GetScore();
-                    clientCaptchaRotationImagesAttemptsState.HandleBan(score);
+                    _captchaRotationImagesAttemptsState.HandleBan(score);
                     Logger.LogUserLogOut("A user has been blocked from the server.");
-                    double banDuration = clientCaptchaRotationImagesAttemptsState.CurrentBanDuration;
+                    double banDuration = _captchaRotationImagesAttemptsState.CurrentBanDuration;
                     JsonObject banMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.LoginBanStart, banDuration);
                     string banMessageJson = JsonConvert.SerializeObject(banMessageJsonObject, new JsonSerializerSettings
                     {

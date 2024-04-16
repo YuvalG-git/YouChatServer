@@ -65,12 +65,15 @@ namespace YouChatServer.UserDetails
         /// <returns>It returns the number of affected rows. If there has been an exception, it returns 0</returns>
         public static int InsertUser(string username, string Password, string FirstName, string LastName, string EmailAddress, string CityName, string Gender, string dateOfBirthAsString, string registrationDateAsString, List<string[]> VerificationQuestionsAndAnswers)
         {
+            SqlTransaction transaction = null;
             try
             {
                 string Md5Password = YouChatServer.Encryption.MD5.CreateMD5Hash(Password);
                 string TagLine = SetTagLine("UserDetails");
-                cmd.Connection = connection;
                 connection.Open();
+                transaction = connection.BeginTransaction();
+                cmd.Connection = connection;
+                cmd.Transaction = transaction;
                 string Sql1 = "INSERT INTO UserDetails (Username, Password, FirstName, LastName, EmailAddress, City, BirthDate, Gender, LastPasswordUpdate, TagLineId) VALUES(@Username, @Md5Password, @FirstName, @LastName, @EmailAddress, @City, @BirthDate, @Gender, @LastPasswordUpdate, @TagLine)";
                 cmd.CommandText = Sql1;
                 cmd.Parameters.Clear(); // Clear previous parameters
@@ -137,18 +140,32 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.AddWithValue("@Md5AnswerNumber5", Md5AnswerNumber5);
                 int w = cmd.ExecuteNonQuery();
 
-                connection.Close();
                 if ((x > 0) && (y > 0) && (z > 0) && (w > 0))
                 {
+                    transaction.Commit();
                     return x;
                 }
-                return 0;
+                else
+                {
+                    transaction.Rollback();
+                    return 0;
+                }
             }
             catch (Exception ex)
             {
+                if (transaction != null)
+                    transaction.Rollback();
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+            finally
+            {
+                if (transaction != null)
+                    transaction.Dispose();
+
+                if (connection.State != ConnectionState.Closed)
+                    connection.Close();
             }
         }
 
@@ -272,6 +289,20 @@ namespace YouChatServer.UserDetails
             {
                 TagLine = RandomStringCreator.RandomString(6);
                 if (!TaglineIsExist(TagLine, DataBaseTableName))
+                {
+                    isTagLineExists = false; //maybe to add a list of failed tagline - will be better to check this list rather then entire database...
+                }
+            }
+            return TagLine;
+        }
+        private static string SetTagLine(string DataBaseTableName1, string DataBaseTableName2)
+        {
+            bool isTagLineExists = true;
+            string TagLine = "";
+            while (isTagLineExists)
+            {
+                TagLine = RandomStringCreator.RandomString(6);
+                if (!TaglineIsExist(TagLine, DataBaseTableName1) && !TaglineIsExist(TagLine, DataBaseTableName2))
                 {
                     isTagLineExists = false; //maybe to add a list of failed tagline - will be better to check this list rather then entire database...
                 }
@@ -1588,9 +1619,9 @@ namespace YouChatServer.UserDetails
             //    Console.WriteLine(ex.Message);
             //}
         }
-        public static void AddColumnToChats() //after this i need to add the new password...
+        public static void AddColumnToGroupChats() //after this i need to add the new password...
         {
-            AddColumnToTable("Chats");
+            AddColumnToTable("GroupChats");
             //try
             //{
             //    cmd.Connection = connection;
@@ -1678,7 +1709,7 @@ namespace YouChatServer.UserDetails
                             case "Friends":
                                 NewColumnName = $"Friend-{columnNumber + 1}";
                                 break;
-                            case "Chats":
+                            case "GroupChats":
                                 NewColumnName = $"ChatParticipant-{columnNumber + 1}";
                                 break;
                                 // Add cases for other tables here if needed
@@ -1710,10 +1741,10 @@ namespace YouChatServer.UserDetails
                 {
                     ChatIcon = System.Drawing.Image.FromStream(ms);
                 }
-                string ChatTagLine = SetTagLine("Chats"); //todo i don't think it should be Userdetails...
+                string ChatTagLine = SetTagLine("GroupChats","DirectChats");
                 cmd.Connection = connection;
                 //string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
-                string sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES(@ChatName, @ChatTagLine, @ChatIcon, @FirstChatMember)";
+                string sql = "INSERT INTO GroupChats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES(@ChatName, @ChatTagLine, @ChatIcon, @FirstChatMember)";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);
@@ -1732,10 +1763,111 @@ namespace YouChatServer.UserDetails
                     if (isNeededToAddColumn || CheckFullChatsCapacity(ChatName, ChatTagLine))
                     {
                         isNeededToAddColumn = true;
-                        AddColumnToChats();
+                        AddColumnToGroupChats();
                     }
                     AddNewChatMember(ChatName, ChatTagLine, ChatMembers[index]);
                 }
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+        public static bool HandleDirectChatCreation(string FriendRequestSenderUsername, string FriendRequestReceiverUsername)
+        {
+            SqlTransaction transaction = null;
+            try
+            {
+                using (connection)
+                {
+                    connection.Open();
+                    transaction = connection.BeginTransaction();
+
+                    // Add the first friend request
+                    if (AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername, transaction) == 0)
+                    {
+                        throw new Exception("Failed to add friend request.");
+                    }
+
+                    // Add the friend request in reverse
+                    if (AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername, transaction) == 0)
+                    {
+                        throw new Exception("Failed to add friend request in reverse.");
+                    }
+
+                    // Create a direct chat
+                    if (CreateDirectChat(FriendRequestSenderUsername, FriendRequestReceiverUsername, transaction) == 0)
+                    {
+                        throw new Exception("Failed to create direct chat.");
+                    }
+
+                    transaction.Commit();
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                transaction?.Rollback();
+                return false;
+            }
+        }
+        public static int CreateDirectChat(string ChatParticipant1, string ChatParticipant2) //for when i want to add another particiapnt i need to first give him the group tagline as well becuase there might be couple group with the same name
+        {
+            try
+            {
+                string ChatTagLine = SetTagLine("GroupChats", "DirectChats");
+                cmd.Connection = connection;
+                //string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
+                string sql = "INSERT INTO DirectChats (ChatTagLineId, [ChatParticipant-1], [ChatParticipant-1]) VALUES(@ChatTagLine, @FirstChatMember, @SecondChatMember)";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
+                cmd.Parameters.AddWithValue("@FirstChatMember", ChatParticipant1);
+                cmd.Parameters.AddWithValue("@SecondChatMember", ChatParticipant2);
+
+                //now i need to add the other members...
+
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
+                connection.Close();
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+        }
+        public static int HandleGroupChatMessage(string MessageContent, DateTime MessageTime, string ChatId)
+        {
+            return HandleMessage("GroupChats", MessageContent, MessageTime, ChatId);
+        }
+        public static int HandleDirectChatMessage(string MessageContent, DateTime MessageTime, string ChatId)
+        {
+            return HandleMessage("DirectChats", MessageContent, MessageTime, ChatId);
+        }
+        private static int HandleMessage(string TableName, string MessageContent, DateTime MessageTime, string ChatId)
+        {
+            try
+            {
+                cmd.Connection = connection;
+                //string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = '" + Username + "' WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
+                string sql = "UPDATE " + TableName + " SET LastMessageContent = @LastMessageContent, LastMessageTime = @LastMessageTime WHERE ChatTagLineId = @ChatTagLineId";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@LastMessageContent", MessageContent);
+                cmd.Parameters.AddWithValue("@LastMessageTime", MessageTime);
+                cmd.Parameters.AddWithValue("@ChatTagLineId", ChatId);
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
+
+                connection.Close();
                 return x;
             }
             catch (Exception ex)
@@ -1752,7 +1884,7 @@ namespace YouChatServer.UserDetails
                 string ChatMemberColumn = GetChatMemberColumnToInsert(ChatName, ChatTagLine);
                 cmd.Connection = connection;
                 //string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = '" + Username + "' WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
-                string sql = "UPDATE Chats SET [" + ChatMemberColumn + "] = @Username WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
+                string sql = "UPDATE GroupChats SET [" + ChatMemberColumn + "] = @Username WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", Username);
@@ -1777,7 +1909,7 @@ namespace YouChatServer.UserDetails
             {
                 cmd.Connection = connection;
                 //string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'";
-                string sql = "SELECT * FROM Chats WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
+                string sql = "SELECT * FROM GroupChats WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);
@@ -1816,7 +1948,7 @@ namespace YouChatServer.UserDetails
             {
                 cmd.Connection = connection;
                 //string sql = "SELECT * FROM Chats WHERE ChatName = '" + ChatName + "' AND ChatTagLineId = '" + ChatTagLine + "'"; ;
-                string sql = "SELECT * FROM Chats WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
+                string sql = "SELECT * FROM GroupChats WHERE ChatName = @ChatName AND ChatTagLineId = @ChatTagLine";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);

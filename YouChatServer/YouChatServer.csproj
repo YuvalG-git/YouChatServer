@@ -74,6 +74,7 @@
     <Compile Include="ClientAttemptsStateHandler\ClientAttemptsState.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientAttemptsStateBase.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientCaptchaRotationImagesAttemptsState.cs" />
+    <Compile Include="ClientAttemptsStateHandler\ServerConnectAttemptCounter.cs" />
     <Compile Include="ClientCaptchaRotationImagesAttemptsState2.cs" />
     <Compile Include="ClientAttemptsState2.cs" />
     <Compile Include="ConvertHandler.cs" />

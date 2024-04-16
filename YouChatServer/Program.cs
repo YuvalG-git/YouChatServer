@@ -4,11 +4,13 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using YouChatServer.ClientAttemptsStateHandler;
 using YouChatServer.UdpHandler;
 
 namespace YouChatServer
@@ -33,7 +35,8 @@ namespace YouChatServer
         public static int maxConnectionsPerIP = 5; // Maximum connections allowed per IP
         public static Dictionary<string, int> connectionCounts = new Dictionary<string, int>();
         public static List<IPEndPoint[]> videoCallMembersDetails = new List<IPEndPoint[]>(); //another soloution might be a dictonary storing as key an object contain name and ip and as value the object of the person you are in a call with...
-        //public static Dictionary<Guid, VideoCallMembers> VideoCalls = new Dictionary<Guid, VideoCallMembers>();
+                                                                                             //public static Dictionary<Guid, VideoCallMembers> VideoCalls = new Dictionary<Guid, VideoCallMembers>();
+        private static Dictionary<string, ServerConnectAttemptCounter> ClientsHistory;
 
         /// <summary>
         /// The Main method sets up a TCP listener on the specified IP address and port number
@@ -56,6 +59,7 @@ namespace YouChatServer
             VideoUdpClient.BeginReceive(new AsyncCallback(ReceiveVideoUdpMessage), null);//starts async listen too screen/camera sharing.
             //AudioUdpClient.BeginReceive(new AsyncCallback(ReceiveAudioUdpMessage), null);
             AudioUdpHandler.StartAudioUdpClient();
+            ClientsHistory = new Dictionary<string, ServerConnectAttemptCounter>();
             //ReceiveAndEchoImageUDP();
             // Start listen to incoming connection requests
             listener.Start();
@@ -77,6 +81,21 @@ namespace YouChatServer
                 //}
                 if (tcp != null)
                 {
+                    string clientIpAndPort = tcp.Client.RemoteEndPoint.ToString();
+                    string clientIP = clientIpAndPort.Split(':')[0];
+
+                    if (!ClientsHistory.ContainsKey(clientIP))
+                    {
+                        ClientsHistory.Add(clientIP, new ServerConnectAttemptCounter(4, TimeSpan.FromMinutes(30)));
+                    }
+                    else if (!ClientsHistory[clientIP].NewAttempt())
+                    {
+                        tcp.Close();
+                        Console.WriteLine($"(DDOS protection) Connection rejected from: {clientIP}");
+                        continue;
+                    }
+                    Console.WriteLine("new socket: " + clientIP);
+
                     Thread t = new Thread(() => StartClient(tcp));
                     t.Start();
                 }
