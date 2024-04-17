@@ -115,7 +115,9 @@ namespace YouChatServer
             PasswordRenewalMessageRequest,
             SuccessfulRenewalMessageResponse,
             FailedRenewalMessageResponse,
-            ErrorHandleRenewalMessageResponse
+            ErrorHandleRenewalMessageResponse,
+            ContactInformationRequest,
+            ContactInformationResponse
         }
     }
 }

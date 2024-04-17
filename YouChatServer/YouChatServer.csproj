@@ -68,7 +68,12 @@
     <Compile Include="CaptchaHandler\CaptchaRotatingImageHandler.cs" />
     <Compile Include="CaptchaHandler\CaptchaRotatingImageList.cs" />
     <Compile Include="Chat.cs" />
+    <Compile Include="ChatHandler\Chat.cs" />
     <Compile Include="ChatHandler\ChatCreator.cs" />
+    <Compile Include="ChatHandler\ChatHandler.cs" />
+    <Compile Include="ChatHandler\ChatParticipant.cs" />
+    <Compile Include="ChatHandler\DirectChat.cs" />
+    <Compile Include="ChatHandler\GroupChat.cs" />
     <Compile Include="ChatHistoryHandler.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientAttemptsState.cs" />
@@ -77,6 +82,8 @@
     <Compile Include="ClientAttemptsStateHandler\ServerConnectAttemptCounter.cs" />
     <Compile Include="ClientCaptchaRotationImagesAttemptsState2.cs" />
     <Compile Include="ClientAttemptsState2.cs" />
+    <Compile Include="ContactHandler\ContactDetails.cs" />
+    <Compile Include="ContactHandler\Contacts.cs" />
     <Compile Include="ConvertHandler.cs" />
     <Compile Include="EncryptionExpirationDate.cs" />
     <Compile Include="Encryption\AESServiceProvider.cs" />
@@ -90,13 +97,15 @@
     <Compile Include="JsonClasses\CaptchaRotationImages.cs" />
     <Compile Include="JsonClasses\CaptchaRotationSuccessRate.cs" />
     <Compile Include="JsonClasses\ChatSettings.cs" />
+    <Compile Include="JsonClasses\ContactAndChat.cs" />
     <Compile Include="JsonClasses\EncryptionKeys.cs" />
     <Compile Include="JsonClasses\FriendRequestControlDetails.cs" />
+    <Compile Include="JsonClasses\MessageClasses\ContactMessage.cs" />
     <Compile Include="JsonClasses\PastFriendRequest.cs" />
     <Compile Include="JsonClasses\FriendRequestDetails.cs" />
     <Compile Include="JsonClasses\FriendRequestResponseDetails.cs" />
     <Compile Include="JsonClasses\ImageContent.cs" />
-    <Compile Include="JsonClasses\Message.cs" />
+    <Compile Include="JsonClasses\MessageClasses\Message.cs" />
     <Compile Include="JsonClasses\PasswordUpdateDetails.cs" />
     <Compile Include="JsonClasses\PastFriendRequests.cs" />
     <Compile Include="JsonClasses\PersonalVerificationQuestions.cs" />
@@ -204,6 +213,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Log\" />
+    <Folder Include="MessageHistory\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

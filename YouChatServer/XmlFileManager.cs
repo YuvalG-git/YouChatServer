@@ -8,17 +8,28 @@ using System.Xml;
 
 namespace YouChatServer
 {
-    internal class XmlFileManager
+    public class XmlFileManager
     {
-        private string _filename;
+        static string projectFolderPath = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
 
+        private string _filename;
+        private string _filePath;
+
+        public XmlFileManager(string filename, List<string> chatParticipants, string ChatId)
+        {
+            _filename = filename;
+            InitializeXmlFile(chatParticipants, ChatId);
+        }
         public XmlFileManager(string filename)
         {
             _filename = filename;
-            InitializeXmlFile();
+        }
+        public string GetFilePath()
+        {
+            return _filePath;
         }
 
-        private void InitializeXmlFile()
+        private void InitializeXmlFile(List<string> chatParticipants, string ChatId)
         {
             if (!File.Exists(_filename))
             {
@@ -29,19 +40,61 @@ namespace YouChatServer
                 XmlElement rootElement = doc.CreateElement("Chat");
                 doc.AppendChild(rootElement);
 
-                // Create the chat name and participants elements
+                // Create the chat name, chat id and participants elements
                 XmlElement chatNameElement = doc.CreateElement("ChatName");
-                chatNameElement.InnerText = "New Chat";
+                chatNameElement.InnerText = _filename;
                 rootElement.AppendChild(chatNameElement);
 
+                XmlElement chatIdElement = doc.CreateElement("ChatId");
+                chatNameElement.InnerText = ChatId;
+                rootElement.AppendChild(chatNameElement);
+
+                string participants = "";
+                foreach (string chatParticipant in chatParticipants)
+                {
+                    participants += chatParticipant + ", ";
+                }
+                if (participants != "")
+                {
+                    participants = participants.Substring(0, participants.Length - 2);
+                }
                 XmlElement participantsElement = doc.CreateElement("Participants");
-                participantsElement.InnerText = "Participant1, Participant2";
+                participantsElement.InnerText = participants;
                 rootElement.AppendChild(participantsElement);
 
 
 
                 // Save the XML document to the file
-                doc.Save(_filename);
+                string filePath = GetFilePath(_filename);
+                doc.Save(filePath);
+            }
+        }
+        private string GetFilePath(string fileName)
+        {
+            //@"C:\Users\Yuval\source\YouChat\YouChatServer\YouChatServer\dat2a.xml";
+            //_filePath = projectFolderPath.Substring(0, projectFolderPath.Length - @"bin\Debug".Length) + "MessageHistory\\" + fileName + ".xml";
+            _filePath = Path.Combine(projectFolderPath.Substring(0, projectFolderPath.Length - @"bin\Debug".Length), "MessageHistory", fileName + ".xml");
+
+            return _filePath;
+        }
+        public bool DeleteFile()
+        {
+            try
+            {
+                if (File.Exists(_filePath))
+                {
+                    File.Delete(_filePath);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (IOException)
+            {
+                // Handle the exception, log it, etc.
+                return false;
             }
         }
 

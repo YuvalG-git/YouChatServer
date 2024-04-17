@@ -19,6 +19,10 @@ namespace YouChatServer.ClientAttemptsStateHandler
             FailedAttempts = 0;
             this.userAuthenticationState = userAuthenticationState;
         }
+        public EnumHandler.UserAuthentication_Enum UserAuthenticationState
+        {
+            get { return userAuthenticationState; }
+        }
 
         protected override void Timer_Tick(object sender, System.Timers.ElapsedEventArgs e)
         {

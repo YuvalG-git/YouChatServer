@@ -8,17 +8,20 @@ namespace YouChatServer.JsonClasses
 {
     internal class Message
     {
-        private string _messageContent;
-        private DateTime _messageDateAndTime;
+        private string _messageSenderName;
         private string _chatId;
+        private object _messageContent; //todo - to do it like that or to use inheritance
+        private DateTime _messageDateAndTime;
 
-        public Message(string messageContent, DateTime messageDateAndTime, string chatId)
+        public Message(string messageSenderName, string chatId, object messageContent, DateTime messageDateAndTime)
         {
+            _messageSenderName = messageSenderName;
+            _chatId = chatId;
             _messageContent = messageContent;
             _messageDateAndTime = messageDateAndTime;
-            _chatId = chatId;
         }
-        public string MessageContent
+
+        public object MessageContent
         { 
             get 
             { 
@@ -49,6 +52,17 @@ namespace YouChatServer.JsonClasses
             set
             {
                 _chatId = value;
+            }
+        }
+        public string MessageSenderName
+        {
+            get
+            {
+                return _messageSenderName;
+            }
+            set
+            {
+                _messageSenderName = value;
             }
         }
     }

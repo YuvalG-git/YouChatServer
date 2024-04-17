@@ -10,8 +10,6 @@ namespace YouChatServer
     {
         Text,      // For sending a text message
         Image,     // For sending an image
-        File,      // For sending a file
-        TextAndImage,  // For sending both text and image
         Contact // For sending a contact
     }
     internal class Message

@@ -25,6 +25,8 @@ using System.CodeDom;
 using YouChatServer.JsonClasses;
 using YouChatServer.CaptchaHandler;
 using YouChatServer.ClientAttemptsStateHandler;
+using YouChatServer.JsonClasses.MessageClasses;
+using YouChatServer.ContactHandler;
 
 namespace YouChatServer
 {
@@ -39,7 +41,6 @@ namespace YouChatServer
         /// The list is static so all the clients will be able to obtain the list of current connected client
         /// </summary>
         public static Hashtable AllClients = new Hashtable();
-        public static Dictionary<string, Chat> AllChats = new Dictionary<string, Chat>();
 
         //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
         //private Dictionary<IPEndPoint, ClientAttemptsState> _clientLoginFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
@@ -399,6 +400,26 @@ namespace YouChatServer
                 FailedAttempt();
             }
         }
+        private void HandleFailedAttempt(ClientAttemptsState clientAttemptsState, EnumHandler.CommunicationMessageID_Enum BanStartEnum, EnumHandler.CommunicationMessageID_Enum FailedAttemptEnum, Action<EnumHandler.CommunicationMessageID_Enum> FailedAttempt)
+        {
+            clientAttemptsState.HandleFailedAttempt();
+            if (clientAttemptsState.IsUserBanned())
+            {
+                clientAttemptsState.HandleBan();
+                Logger.LogUserLogOut("A user has been blocked from the server.");
+                double banDuration = clientAttemptsState.CurrentBanDuration;
+                JsonObject banMessageJsonObject = new JsonObject(BanStartEnum, banDuration);
+                string banMessageJson = JsonConvert.SerializeObject(banMessageJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(banMessageJson);
+            }
+            else
+            {
+                FailedAttempt(FailedAttemptEnum);
+            }
+        }
         //private ClientAttemptsState GetClientAttemptsStateObject()
         //{
         //    ClientAttemptsState clientAttemptsState = null;
@@ -462,24 +483,71 @@ namespace YouChatServer
             });
             SendMessage(smtpRegistrationCodeResponseJson);
         }
-        private void HandleResetPasswordRequest_SmtpCodeEnum(JsonObject jsonObject)
+        private void SendFailedSmtpPasswordRestartCode()
         {
-            string code = jsonObject.MessageBody as string;
-            EnumHandler.CommunicationMessageID_Enum SmtpResetPasswordCodeResponseEnum;
-            if (smtpHandler.GetSmtpCode() == code)
-            {
-                SmtpResetPasswordCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulResetPasswordResponse_SmtpCode;
-            }
-            else
-            {
-                SmtpResetPasswordCodeResponseEnum = EnumHandler.CommunicationMessageID_Enum.FailedResetPasswordResponse_SmtpCode;
-            }
-            JsonObject smtpResetPasswordCodeResponseJsonObject = new JsonObject(SmtpResetPasswordCodeResponseEnum, null);
+            JsonObject smtpResetPasswordCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedResetPasswordResponse_SmtpCode, null);
             string smtpResetPasswordCodeResponseJson = JsonConvert.SerializeObject(smtpResetPasswordCodeResponseJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
             });
             SendMessage(smtpResetPasswordCodeResponseJson);
+        }
+        private void HandleResetPasswordRequest_SmtpCodeEnum(JsonObject jsonObject)
+        {
+            string code = jsonObject.MessageBody as string;
+            if (smtpHandler.GetSmtpCode() == code)
+            {
+                _PasswordResetFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordRestart);
+                JsonObject smtpResetPasswordCodeResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulResetPasswordResponse_SmtpCode, null);
+                string smtpResetPasswordCodeResponseJson = JsonConvert.SerializeObject(smtpResetPasswordCodeResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(smtpResetPasswordCodeResponseJson);
+            }
+            else
+            {
+                if (_PasswordResetFailedAttempts == null)
+                {
+                    _PasswordResetFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordRestart);
+                }
+                HandleFailedAttempt(_PasswordResetFailedAttempts, EnumHandler.CommunicationMessageID_Enum.ResetPasswordBanStart, SendFailedSmtpPasswordRestartCode);
+            }
+        }
+        private void HandleResetPasswordRequestEnum(JsonObject jsonObject)
+        {
+            SmtpDetails smtpDetails = jsonObject.MessageBody as SmtpDetails;
+            string username = smtpDetails.Username;
+            string emailAddress = smtpDetails.EmailAddress;
+            if (DataHandler.IsMatchingUsernameAndEmailAddressExist(username, emailAddress))
+            {
+                _PasswordResetFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordRestart);
+                smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.PasswordRenewalMessage);
+                JsonObject resetPasswordResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulResetPasswordResponse, null);
+                string resetPasswordResponseJson = JsonConvert.SerializeObject(resetPasswordResponseJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(resetPasswordResponseJson);
+            }
+            else
+            {
+
+                if (_PasswordResetFailedAttempts == null)
+                {
+                    _PasswordResetFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordRestart);
+                }
+                HandleFailedAttempt(_PasswordResetFailedAttempts, EnumHandler.CommunicationMessageID_Enum.ResetPasswordBanStart, SendFailedResetPasswordResponse);
+            }
+        }
+        private void SendFailedResetPasswordResponse()
+        {
+            JsonObject resetPasswordResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedResetPasswordResponse, null);
+            string resetPasswordResponseJson = JsonConvert.SerializeObject(resetPasswordResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(resetPasswordResponseJson);
         }
 
         private void HandleFriendRequestSenderEnum(JsonObject jsonObject) //todo - not finished...
@@ -552,7 +620,7 @@ namespace YouChatServer
             string FriendRequestStatus = friendRequestResponseDetails.Status;
             HandleFriendRequestResponse(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus);
         }
-        private void HandleFriendRequestResponse(string FriendRequestSenderUsername, string FriendRequestReceiverUsername, string FriendRequestStatus)
+=        private void HandleFriendRequestResponse(string FriendRequestSenderUsername, string FriendRequestReceiverUsername, string FriendRequestStatus)
         {
             if (DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
             {
@@ -562,17 +630,45 @@ namespace YouChatServer
                     {
                         DataHandler.AddColumnToFriends();
                     }
-                    if (DataHandler.AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0) //one worked...
+                    string xmlFileName = "DirectChat - " + FriendRequestSenderUsername + " AND " + FriendRequestReceiverUsername;
+                    List<string> chatParticipantNames = new List<string>
                     {
-                        if (DataHandler.AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername) > 0) //both worked...
+                        FriendRequestSenderUsername,
+                        FriendRequestReceiverUsername
+                    };
+                    string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats", false);
+                    XmlFileManager xmlFileManager = new XmlFileManager(xmlFileName, chatParticipantNames, ChatTagLine); //maybe i should create it before i do handledirectchatcreation and if it dont work to delete it...
+                    string filePath = xmlFileManager.GetFilePath();
+                    if (DataHandler.HandleDirectChatCreation(ChatTagLine, FriendRequestSenderUsername, FriendRequestReceiverUsername, filePath))
+                    {
+                        List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
+                        ChatHandler.Chat chat = new DirectChat(ChatTagLine, filePath, null, "", chatParticipants);
+                        ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
+
+                        DirectChat directChat = (DirectChat)chat;
+
+                        ContactDetails friendRequestSenderUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestSenderUsername);
+                        ContactAndChat friendRequestSenderUsernameContactAndChat = new ContactAndChat(directChat, friendRequestSenderUsernameContact);
+                        JsonObject friendRequestSenderUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestSenderUsernameContactAndChat);
+                        string friendRequestSenderUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestSenderUsernameContactAndChat, new JsonSerializerSettings
                         {
-                            JsonObject friendRequestResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, null);
-                            string friendRequestResponseJson = JsonConvert.SerializeObject(friendRequestResponseJsonObject, new JsonSerializerSettings
-                            {
-                                TypeNameHandling = TypeNameHandling.Auto
-                            });
-                            Unicast(friendRequestResponseJson, FriendRequestSenderUsername);
-                        }
+                            TypeNameHandling = TypeNameHandling.Auto
+                        });
+                        SendMessage(friendRequestSenderUsernameContactAndChatJson);
+
+                        ContactDetails friendRequestReceiverUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestReceiverUsername);
+                        ContactAndChat friendRequestReceiverUsernameContactAndChat = new ContactAndChat(directChat, friendRequestReceiverUsernameContact);
+
+                        JsonObject friendRequestReceiverUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestReceiverUsernameContactAndChat);
+                        string friendRequestReceiverUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestReceiverUsernameContactAndChatJsonObject, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.Auto
+                        });
+                        Unicast(friendRequestReceiverUsernameContactAndChatJson, FriendRequestSenderUsername);
+                    }
+                    else
+                    {
+                        xmlFileManager.DeleteFile();
                     }
                     //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
                 }
@@ -822,8 +918,36 @@ namespace YouChatServer
         private void HandleSendMessageRequestEnum(JsonObject jsonObject)
         {
             JsonClasses.Message message = jsonObject.MessageBody as JsonClasses.Message;
-            string messageContent = message.MessageContent;
-            Multicast(sendMessageResponse, messageContent);
+            string messageSenderName = message.MessageSenderName;
+            string chatId = message.ChatId;
+            DateTime messageDateTime = message.MessageDateAndTime;
+            XmlFileManager xmlFileManager = ChatHandler.ChatHandler.ChatFileManagers[chatId];
+            object messageContent = message.MessageContent;
+            if (jsonObject.MessageBody is string textMessageContent)
+            {
+                xmlFileManager.AppendMessage(messageSenderName, "Text", textMessageContent, messageDateTime);
+
+            }
+            else if (jsonObject.MessageBody is ImageContent imageMessageContent)
+            {
+                byte[] imageMessageContentByteArray = imageMessageContent.ImageBytes;
+                string imageMessageContentString = imageMessageContentByteArray.ToString();
+                xmlFileManager.AppendMessage(messageSenderName, "Image", imageMessageContentString, messageDateTime);
+
+            }
+            else if (jsonObject.MessageBody is ContactMessage contactMessageContent)
+            {
+                string username = contactMessageContent.Username;
+                string profilePicture = contactMessageContent.ProfilePicture;
+                xmlFileManager.AppendMessage(messageSenderName, "Contact", username + "\n" + profilePicture, messageDateTime);
+            }
+            JsonObject messageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SendMessageResponse, message);
+            string messageJson = JsonConvert.SerializeObject(messageJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendChatMessage(messageJson,chatId);
+            //Multicast(sendMessageResponse, messageContent);
         }
         private void HandlePasswordUpdateRequestEnum(JsonObject jsonObject)
         {
@@ -831,12 +955,12 @@ namespace YouChatServer
             string username = passwordUpdateDetails.Username;
             string pastPassword = passwordUpdateDetails.PastPassword;
             string newPassword = passwordUpdateDetails.NewPassword;
+            if (_PasswordUpdateFailedAttempts == null)
+            {
+                _PasswordUpdateFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordUpdate);
+            }
             if (!DataHandler.isMatchingUsernameAndPasswordExist(username, pastPassword)) 
             {
-                if (_PasswordUpdateFailedAttempts == null)
-                {
-                    _PasswordUpdateFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordUpdate);
-                }
                 HandleFailedAttempt(_PasswordUpdateFailedAttempts, EnumHandler.CommunicationMessageID_Enum.PasswordUpdateBanStart, SendUnmatchedDetailsPasswordUpdateResponse);
 
                 //past password not matching..
@@ -847,8 +971,7 @@ namespace YouChatServer
                 EnumHandler.CommunicationMessageID_Enum failedPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.FailedPasswordUpdateResponse_PasswordExist;
                 EnumHandler.CommunicationMessageID_Enum errorPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.ErrorHandlePasswordUpdateResponse;
                 PasswordRenewalOptions passwordRenewalOptions = new PasswordRenewalOptions(successfulPasswordRenewal, failedPasswordRenewal, errorPasswordRenewal);
-                HandlePasswordRenewal(username,newPassword, passwordRenewalOptions);
-                _PasswordUpdateFailedAttempts = null;
+                HandlePasswordRenewal(username,newPassword, passwordRenewalOptions, _PasswordUpdateFailedAttempts);
             }
         }
         private void SendUnmatchedDetailsPasswordUpdateResponse()
@@ -869,36 +992,62 @@ namespace YouChatServer
             EnumHandler.CommunicationMessageID_Enum failedPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.FailedRenewalMessageResponse;
             EnumHandler.CommunicationMessageID_Enum errorPasswordRenewal = EnumHandler.CommunicationMessageID_Enum.ErrorHandleRenewalMessageResponse;
             PasswordRenewalOptions passwordRenewalOptions = new PasswordRenewalOptions(successfulPasswordRenewal, failedPasswordRenewal, errorPasswordRenewal);
-            HandlePasswordRenewal(username, newPassword, passwordRenewalOptions);
+            if (_PasswordResetFailedAttempts == null)
+            {
+                _PasswordResetFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordRestart);
+            }
+            HandlePasswordRenewal(username, newPassword, passwordRenewalOptions, _PasswordResetFailedAttempts);
         }
-        private void HandlePasswordRenewal(string username, string password, PasswordRenewalOptions passwordRenewalOptions)
+        private void SendFailedPasswordRenewal(EnumHandler.CommunicationMessageID_Enum failedPasswordRenewalEnum)
         {
-            EnumHandler.CommunicationMessageID_Enum passwordRenewalEnumType;
-            if (UserDetails.DataHandler.PasswordIsExist(username, password)) //means the password already been chosen once by the user...
-            {
-                passwordRenewalEnumType = passwordRenewalOptions.GetFailedPasswordRenewal();
-            }
-            else
-            {
-                if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
-                {
-                    UserDetails.DataHandler.AddColumnToUserPastPasswords();
-                }
-                if (UserDetails.DataHandler.SetNewPassword(username, password) > 0)
-                {
-                    passwordRenewalEnumType = passwordRenewalOptions.GetSuccessfulPasswordRenewal();
-                }
-                else
-                {
-                    passwordRenewalEnumType = passwordRenewalOptions.GetErrorPasswordRenewal();
-                }
-            }
-            JsonObject passwordRenewalJsonObject = new JsonObject(passwordRenewalEnumType, null);
+            JsonObject passwordRenewalJsonObject = new JsonObject(failedPasswordRenewalEnum, null);
             string passwordRenewalJson = JsonConvert.SerializeObject(passwordRenewalJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
             });
             SendMessage(passwordRenewalJson);
+        }
+        private void HandlePasswordRenewal(string username, string password, PasswordRenewalOptions passwordRenewalOptions, ClientAttemptsState clientAttemptsState)
+        {
+            if (DataHandler.PasswordIsExist(username, password)) //means the password already been chosen once by the user...
+            {
+                EnumHandler.CommunicationMessageID_Enum failedPasswordRenewalEnum = passwordRenewalOptions.GetFailedPasswordRenewal();
+                EnumHandler.CommunicationMessageID_Enum BanStartEnumType;
+                switch (clientAttemptsState.UserAuthenticationState)
+                {
+                    case EnumHandler.UserAuthentication_Enum.PasswordRestart:
+                        BanStartEnumType = EnumHandler.CommunicationMessageID_Enum.ResetPasswordBanStart;
+                        break;
+                    default: //EnumHandler.UserAuthentication_Enum.PasswordUpdate (two possibles options...
+                        BanStartEnumType = EnumHandler.CommunicationMessageID_Enum.PasswordUpdateBanStart;
+                        break;
+                }
+                HandleFailedAttempt(clientAttemptsState, BanStartEnumType, failedPasswordRenewalEnum, SendFailedPasswordRenewal);
+            }
+            else
+            {
+                EnumHandler.CommunicationMessageID_Enum passwordRenewalEnumType;
+                if (DataHandler.CheckFullPasswordCapacity(username))
+                {
+                    DataHandler.AddColumnToUserPastPasswords();
+                }
+                if (DataHandler.SetNewPassword(username, password) > 0)
+                {
+                    clientAttemptsState = null;
+                    passwordRenewalEnumType = passwordRenewalOptions.GetSuccessfulPasswordRenewal();
+
+                }
+                else
+                {
+                    passwordRenewalEnumType = passwordRenewalOptions.GetErrorPasswordRenewal();
+                }
+                JsonObject passwordRenewalJsonObject = new JsonObject(passwordRenewalEnumType, null);
+                string passwordRenewalJson = JsonConvert.SerializeObject(passwordRenewalJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(passwordRenewalJson);
+            }
         }
         private void HandleUdpAudioConnectionRequestEnum(JsonObject jsonObject)
         {
@@ -1096,28 +1245,7 @@ namespace YouChatServer
             CaptchaRotationImageDetails captchaRotationImageDetails = GetCaptchaRotationImageDetails(score, attempts);
             return captchaRotationImageDetails;
         }
-        private void HandleResetPasswordRequestEnum(JsonObject jsonObject)
-        {
-            SmtpDetails smtpDetails = jsonObject.MessageBody as SmtpDetails;
-            string username = smtpDetails.Username;
-            string emailAddress = smtpDetails.EmailAddress;
-            EnumHandler.CommunicationMessageID_Enum resetPasswordResponse;
-            if (DataHandler.IsMatchingUsernameAndEmailAddressExist(username, emailAddress))
-            {
-                smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.PasswordRenewalMessage);
-                resetPasswordResponse = EnumHandler.CommunicationMessageID_Enum.SuccessfulResetPasswordResponse;
-            }
-            else
-            {
-                resetPasswordResponse = EnumHandler.CommunicationMessageID_Enum.FailedResetPasswordResponse;
-            }
-            JsonObject resetPasswordResponseJsonObject = new JsonObject(resetPasswordResponse, null);
-            string resetPasswordResponseJson = JsonConvert.SerializeObject(resetPasswordResponseJsonObject, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.Auto
-            });
-            SendMessage(resetPasswordResponseJson);
-        }
+
         private void HandlePastFriendRequestsRequestEnum(JsonObject jsonObject)
         {
             List<PastFriendRequest> friendRequests = DataHandler.CheckFriendRequests(_ClientNick);
@@ -1141,6 +1269,17 @@ namespace YouChatServer
                 TypeNameHandling = TypeNameHandling.Auto
             });
             SendMessage(pastFriendRequestsJson);
+        }
+        private void HandleContactInformationRequestEnum(JsonObject jsonObject)
+        {
+            List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
+            Contacts contacts = DataHandler.GetFriendsProfileInformation(friendNames);
+            JsonObject contactsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ContactInformationResponse, contacts);
+            string contactsJson = JsonConvert.SerializeObject(contactsJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(contactsJson);
         }
 
         private void ReceiveMessageLength(IAsyncResult ar)
@@ -1311,6 +1450,12 @@ namespace YouChatServer
                             case EnumHandler.CommunicationMessageID_Enum.PasswordRenewalMessageRequest:
                                 HandlePasswordRenewalMessageRequestEnum(jsonObject);
 
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.ContactInformationRequest:
+                                HandleContactInformationRequestEnum(jsonObject);
+                                List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
+                                Contacts contacts = UserDetails.DataHandler.GetFriendsProfileInformation(friendNames);
+                                SendMessage(ContactInformationResponse, ContactsInformation);
                                 break;
                         }
                     }
@@ -1869,15 +2014,31 @@ namespace YouChatServer
             }
         }//end SendMessage
 
-        public void Unicast(string jsonMessage, string UserID, bool needEncryption = true)
+        public void Unicast(string jsonMessage, string UserID)
         {
             foreach (DictionaryEntry c in AllClients)
             {
                 if (((Client)(c.Value))._ClientNick == UserID) //בעתיד להחליף clientnick במשתנה של userid
                 {
-                    ((Client)(c.Value)).SendMessage(jsonMessage, needEncryption);
+                    ((Client)(c.Value)).SendMessage(jsonMessage);
                 }
             }
+        }
+        public void SendChatMessage(string jsonMessage, string chatId)
+        {
+            ChatHandler.Chat chat = ChatHandler.ChatHandler.AllChats[chatId];
+            if (chat.UserExist(_ClientNick))
+            {
+                List<ChatParticipant> chatParticipants = chat.ChatParticipants;
+                string chatParticipantName;
+                //List<string> chatParticipantNames = new List<string>();
+                foreach (ChatParticipant chatParticipant in chatParticipants)
+                {
+                    chatParticipantName = chatParticipant.Username;
+                    //chatParticipantNames.Add(chatParticipant.Username);
+                    Unicast(jsonMessage, chatParticipantName);
+                }
+            }       
         }
 
         //public void SendMessage(string jsonMessage, bool needEncryption = true)
