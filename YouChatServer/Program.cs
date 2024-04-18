@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using YouChatServer.ClientAttemptsStateHandler;
 using YouChatServer.UdpHandler;
+using YouChatServer.UserDetails;
 
 namespace YouChatServer
 {
@@ -49,7 +50,6 @@ namespace YouChatServer
         {
             Logger.LogInfo("Application started.");
             ChatHandler.ChatHandler.SetChats();
-
 
             //UserDetails.DataCreator.CreateDataBase();
             System.Net.IPAddress localAdd = System.Net.IPAddress.Parse(ipAddress);

@@ -94,6 +94,7 @@ namespace YouChatServer
         /// </summary>
         private string _ClientNick;
 
+        private bool _isOnline;
 
         /// <summary>
         /// Represents the overall ID of the player
@@ -293,6 +294,7 @@ namespace YouChatServer
             captchaCodeHandler = new CaptchaCodeHandler();
             captchaRotatingImageHandler = new CaptchaRotatingImageHandler();
             _LoginFailedAttempts = new ClientAttemptsState(this,EnumHandler.UserAuthentication_Enum.Login);
+            _isOnline = false;
             //ClientAttemptsState clientAttemptsState = null;
             //InitializeClientAttemptsStateObject(ref clientAttemptsState);
 
@@ -582,13 +584,16 @@ namespace YouChatServer
                                 smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress); //sends if he is offline so he know and if he is online so he will know to look there...
 
                                 //to check if he is online...
-                                if (UserIsConnected(FriendRequestReceiverUsername))
+                                if (UserIsOnline(FriendRequestReceiverUsername))
                                 {
-                                    string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
-                                    if (profilePicture != "")
+                                    string profilePicture = DataHandler.GetProfilePicture(FriendRequestSenderUsername);
+                                    DateTime currentTime = DateTime.Now;
+                                    DateTime requestDate = DataHandler.GetFriendRequestDate(FriendRequestSenderUsername,FriendRequestReceiverUsername, currentTime);
+
+                                    if (profilePicture != "" && requestDate != currentTime)
                                     {
-                                        FriendRequestControlDetails friendRequestControlDetails = new FriendRequestControlDetails(FriendRequestSenderUsername, profilePicture);
-                                        JsonObject friendRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestReciever, friendRequestControlDetails);
+                                        PastFriendRequest friendRequest = new PastFriendRequest(FriendRequestSenderUsername, profilePicture, requestDate);
+                                        JsonObject friendRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestReciever, friendRequest);
                                         string friendRequestJson = JsonConvert.SerializeObject(friendRequestJsonObject, new JsonSerializerSettings
                                         {
                                             TypeNameHandling = TypeNameHandling.Auto
@@ -620,7 +625,7 @@ namespace YouChatServer
             string FriendRequestStatus = friendRequestResponseDetails.Status;
             HandleFriendRequestResponse(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus);
         }
-=        private void HandleFriendRequestResponse(string FriendRequestSenderUsername, string FriendRequestReceiverUsername, string FriendRequestStatus)
+        private void HandleFriendRequestResponse(string FriendRequestSenderUsername, string FriendRequestReceiverUsername, string FriendRequestStatus)
         {
             if (DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
             {
@@ -636,21 +641,21 @@ namespace YouChatServer
                         FriendRequestSenderUsername,
                         FriendRequestReceiverUsername
                     };
-                    string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats", false);
+                    string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats");
                     XmlFileManager xmlFileManager = new XmlFileManager(xmlFileName, chatParticipantNames, ChatTagLine); //maybe i should create it before i do handledirectchatcreation and if it dont work to delete it...
                     string filePath = xmlFileManager.GetFilePath();
                     if (DataHandler.HandleDirectChatCreation(ChatTagLine, FriendRequestSenderUsername, FriendRequestReceiverUsername, filePath))
                     {
                         List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
-                        ChatHandler.Chat chat = new DirectChat(ChatTagLine, filePath, null, "", chatParticipants);
+                        ChatHandler.ChatDetails chat = new DirectChatDetails(ChatTagLine, filePath, null, "", chatParticipants);
                         ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
 
-                        DirectChat directChat = (DirectChat)chat;
+                        DirectChatDetails directChat = (DirectChatDetails)chat;
 
                         ContactDetails friendRequestSenderUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestSenderUsername);
                         ContactAndChat friendRequestSenderUsernameContactAndChat = new ContactAndChat(directChat, friendRequestSenderUsernameContact);
                         JsonObject friendRequestSenderUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestSenderUsernameContactAndChat);
-                        string friendRequestSenderUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestSenderUsernameContactAndChat, new JsonSerializerSettings
+                        string friendRequestSenderUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestSenderUsernameContactAndChatJsonObject, new JsonSerializerSettings
                         {
                             TypeNameHandling = TypeNameHandling.Auto
                         });
@@ -869,6 +874,7 @@ namespace YouChatServer
                 if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
                 {
                     //was ok...
+                    _isOnline = false;
                 }
             }
             NetworkStream stream = _client.GetStream();
@@ -1102,6 +1108,7 @@ namespace YouChatServer
             }
             else if (DataHandler.SetUserOnline(_ClientNick) > 0)
             {
+                _isOnline = true;
                 PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckResponse_OpenChat;
             }
             else
@@ -1281,6 +1288,45 @@ namespace YouChatServer
             });
             SendMessage(contactsJson);
         }
+        private void HandleChatInformationRequestEnum(JsonObject jsonObject)
+        {
+            List<ChatDetails> userChats = ChatHandler.ChatHandler.GetUserChats(_ClientNick);
+            Chats chats = new Chats(userChats);
+            JsonObject chatsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ChatInformationResponse, chats);
+            string chatsJson = JsonConvert.SerializeObject(chatsJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(chatsJson);
+        }
+        private void HandleGroupCreatorRequestEnum(JsonObject jsonObject)
+        {
+            ChatCreator newChat = jsonObject.MessageBody as ChatCreator;
+            string xmlFileName = newChat.ChatName; ;
+            List<string> chatParticipantNames = newChat.ChatParticipants;
+            byte[] chatProfilePictrue = newChat.ChatProfilePictureBytes;
+            string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats");
+            XmlFileManager xmlFileManager = new XmlFileManager(xmlFileName, chatParticipantNames, ChatTagLine); //maybe i should create it before i do handledirectchatcreation and if it dont work to delete it...
+            string filePath = xmlFileManager.GetFilePath();
+            if (DataHandler.CreateGroupChat(newChat, ChatTagLine) > 0)
+            {
+                List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
+                ChatHandler.ChatDetails chat = new GroupChatDetails(ChatTagLine, filePath, null, "", chatParticipants, xmlFileName, chatProfilePictrue);
+                ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
+                //SendMessage(GroupCreatorResponse, "Group was successfully created");
+                GroupChatDetails groupChat = (GroupChatDetails)chat;
+
+                JsonObject groupChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, groupChat);
+                string groupChatJson = JsonConvert.SerializeObject(groupChatJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendChatMessage(groupChatJson, ChatTagLine);
+                //ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
+                //needs to send this group creation to every logged user...
+            }
+         
+        }
 
         private void ReceiveMessageLength(IAsyncResult ar)
         {
@@ -1449,13 +1495,19 @@ namespace YouChatServer
                                 break;
                             case EnumHandler.CommunicationMessageID_Enum.PasswordRenewalMessageRequest:
                                 HandlePasswordRenewalMessageRequestEnum(jsonObject);
-
                                 break;
+                            //case EnumHandler.CommunicationMessageID_Enum.ChatAndContactDetailsRequest:
+                            //    HandleContactInformationRequestEnum(jsonObject);
+                            //    HandleChatInformationRequestEnum(jsonObject);
+                            //    break;
                             case EnumHandler.CommunicationMessageID_Enum.ContactInformationRequest:
                                 HandleContactInformationRequestEnum(jsonObject);
-                                List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
-                                Contacts contacts = UserDetails.DataHandler.GetFriendsProfileInformation(friendNames);
-                                SendMessage(ContactInformationResponse, ContactsInformation);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.ChatInformationRequest:
+                                HandleChatInformationRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.GroupCreatorRequest:
+                                HandleGroupCreatorRequestEnum(jsonObject);
                                 break;
                         }
                     }
@@ -2016,9 +2068,11 @@ namespace YouChatServer
 
         public void Unicast(string jsonMessage, string UserID)
         {
+            Client client;
             foreach (DictionaryEntry c in AllClients)
             {
-                if (((Client)(c.Value))._ClientNick == UserID) //בעתיד להחליף clientnick במשתנה של userid
+                client = ((Client)(c.Value));
+                if (client._ClientNick == UserID && client._isOnline) //בעתיד להחליף clientnick במשתנה של userid
                 {
                     ((Client)(c.Value)).SendMessage(jsonMessage);
                 }
@@ -2026,7 +2080,7 @@ namespace YouChatServer
         }
         public void SendChatMessage(string jsonMessage, string chatId)
         {
-            ChatHandler.Chat chat = ChatHandler.ChatHandler.AllChats[chatId];
+            ChatHandler.ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
             if (chat.UserExist(_ClientNick))
             {
                 List<ChatParticipant> chatParticipants = chat.ChatParticipants;
@@ -2220,6 +2274,17 @@ namespace YouChatServer
             foreach (DictionaryEntry c in AllClients)
             {
                 if (((Client)(c.Value))._ClientNick == username) //לבדוק גם אם הוא online...
+                    return true;
+            }
+            return false;
+        }
+        public Boolean UserIsOnline(string username)
+        {
+            Client client;
+            foreach (DictionaryEntry c in AllClients)
+            {
+                client = (Client)(c.Value);
+                if (client._ClientNick == username && client._isOnline) //לבדוק גם אם הוא online...
                     return true;
             }
             return false;

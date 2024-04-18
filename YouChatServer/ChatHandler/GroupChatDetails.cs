@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace YouChatServer.ChatHandler
 {
-    public class GroupChat : Chat
+    public class GroupChatDetails : ChatDetails
     {
         private string _chatName;
         public byte[] _chatProfilePicture;
-        public GroupChat(string chatTagLineId, string messageHistory, DateTime? lastMessageTime, string lastMessageContent, List<ChatParticipant> chatParticipants, string chatName, byte[] chatProfilePicture) : base(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants)
+        public GroupChatDetails(string chatTagLineId, string messageHistory, DateTime? lastMessageTime, string lastMessageContent, List<ChatParticipant> chatParticipants, string chatName, byte[] chatProfilePicture) : base(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants)
         {
             _chatName = chatName;
             _chatProfilePicture = chatProfilePicture;

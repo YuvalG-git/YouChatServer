@@ -9,18 +9,49 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace YouChatServer.ChatHandler
 {
-    internal class ChatCreator
+    public class ChatCreator
     {
-        public string _chatName { get; set; }
-        //public List<ContactHandler.Contact> _chatParticipants{ get; set; } //could be nice to save this but the problem is that could be users that arent my friends.. so for now i will use string
-        public List<string> _chatParticipants { get; set; }
-        public byte[] _chatProfilePictureBytes { get; set; }
+        private string _chatName;
+        private List<string> _chatParticipants;
+        private byte[] _chatProfilePictureBytes;
         public ChatCreator(string name, List<string> chatParticipants, byte[] chatProfilePictureBytes)
         {
             this._chatName = name;
-            this._chatParticipants = new List<string>();
-            _chatParticipants = chatParticipants;
-            _chatProfilePictureBytes = chatProfilePictureBytes;
+            this._chatParticipants = chatParticipants;
+            this._chatProfilePictureBytes = chatProfilePictureBytes;
+        }
+        public string ChatName
+        {
+            get
+            {
+                return _chatName;
+            }
+            set
+            {
+                _chatName = value;
+            }
+        }
+        public List<string> ChatParticipants
+        {
+            get
+            {
+                return _chatParticipants;
+            }
+            set
+            {
+                _chatParticipants = value;
+            }
+        }
+        public byte[] ChatProfilePictureBytes
+        {
+            get
+            {
+                return _chatProfilePictureBytes;
+            }
+            set
+            {
+                _chatProfilePictureBytes = value;
+            }
         }
     }
 }

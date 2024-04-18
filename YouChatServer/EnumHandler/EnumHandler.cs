@@ -116,8 +116,15 @@ namespace YouChatServer
             SuccessfulRenewalMessageResponse,
             FailedRenewalMessageResponse,
             ErrorHandleRenewalMessageResponse,
+            ChatAndContactDetailsRequest,
+            ChatAndContactDetailsResponse_Contacts,
+            ChatAndContactDetailsResponse_Chats,
             ContactInformationRequest,
-            ContactInformationResponse
+            ContactInformationResponse,
+            ChatInformationRequest,
+            ChatInformationResponse,
+            GroupCreatorRequest,
+            GroupCreatorResponse
         }
     }
 }

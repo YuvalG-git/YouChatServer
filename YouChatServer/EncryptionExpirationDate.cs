@@ -14,7 +14,7 @@ namespace YouChatServer
         private readonly System.Timers.Timer Timer = new System.Timers.Timer();
         private TimeSpan TimerTickTimeSpan;
         private TimeSpan CountDownTimeSpan;
-        private const int ExpirationDateInMinutes = 1;
+        private const int ExpirationDateInMinutes = 60;
         public EncryptionExpirationDate(Client client)
         {
             Client = client;

@@ -68,12 +68,13 @@
     <Compile Include="CaptchaHandler\CaptchaRotatingImageHandler.cs" />
     <Compile Include="CaptchaHandler\CaptchaRotatingImageList.cs" />
     <Compile Include="Chat.cs" />
-    <Compile Include="ChatHandler\Chat.cs" />
+    <Compile Include="ChatHandler\ChatDetails.cs" />
     <Compile Include="ChatHandler\ChatCreator.cs" />
     <Compile Include="ChatHandler\ChatHandler.cs" />
     <Compile Include="ChatHandler\ChatParticipant.cs" />
-    <Compile Include="ChatHandler\DirectChat.cs" />
-    <Compile Include="ChatHandler\GroupChat.cs" />
+    <Compile Include="ChatHandler\Chats.cs" />
+    <Compile Include="ChatHandler\DirectChatDetails.cs" />
+    <Compile Include="ChatHandler\GroupChatDetails.cs" />
     <Compile Include="ChatHistoryHandler.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientAttemptsState.cs" />

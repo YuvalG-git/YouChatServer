@@ -206,17 +206,17 @@ namespace YouChatServer.UserDetails
         //    }
 
         //}
-        public static List<ChatHandler.Chat> GetAllChats()
+        public static List<ChatHandler.ChatDetails> GetAllChats()
         {
-            List<ChatHandler.Chat> allChats = new List<ChatHandler.Chat>();
+            List<ChatHandler.ChatDetails> allChats = new List<ChatHandler.ChatDetails>();
             SqlTransaction transaction = null;
             try
             {
                 connection.Open();
                 transaction = connection.BeginTransaction();
 
-                List<ChatHandler.Chat> directChats = GetChats("DirectChats", transaction);
-                List<ChatHandler.Chat> groupChats = GetChats("GroupChats", transaction);
+                List<ChatHandler.ChatDetails> directChats = GetChats("DirectChats", transaction);
+                List<ChatHandler.ChatDetails> groupChats = GetChats("GroupChats", transaction);
                 // Add the first friend request
                 if (directChats == null)
                 {
@@ -251,9 +251,10 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        public static List<ChatHandler.Chat> GetChats(string tableName, SqlTransaction transaction)
+        public static List<ChatHandler.ChatDetails> GetChats(string tableName, SqlTransaction transaction)
         {
-            List<ChatHandler.Chat> chats = new List<ChatHandler.Chat>();
+            SqlDataReader Reader = null;
+            List<ChatHandler.ChatDetails> chats = new List<ChatHandler.ChatDetails>();
             try
             {
                 cmd.Connection = connection;
@@ -271,7 +272,7 @@ namespace YouChatServer.UserDetails
                 ChatParticipant chatParticipant;
                 string participant;
                 string participantProfilePictureId;
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
                     chatTagLineId = Reader["ChatTagLineId"].ToString();
@@ -297,16 +298,16 @@ namespace YouChatServer.UserDetails
                             }
                         }
                     }
-                    ChatHandler.Chat chat = null;
+                    ChatHandler.ChatDetails chat = null;
                     if (tableName == "DirectChats")
                     {
-                        chat = new DirectChat(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants);
+                        chat = new DirectChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants);
                     }
                     else if (tableName == "GroupChats")
                     {
                         chatName = Reader["ChatName"].ToString();
                         chatProfilePicture = (byte[])Reader["ChatProfilePicture"];
-                        chat = new GroupChat(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants, chatName, chatProfilePicture);
+                        chat = new GroupChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants, chatName, chatProfilePicture);
 
                     }
                     if (chat != null)
@@ -322,6 +323,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return null;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
             }
         }
         public static List<ChatParticipant> GetChatParticipants(List<string> chatParticipantNames)
@@ -374,6 +382,7 @@ namespace YouChatServer.UserDetails
         public static string[] GetUserVerificationQuestions(string Username)
         {
             string[] questions = new string[5];
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -384,7 +393,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
 
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 if (Reader.Read())
                 {
                     for (int i = 0; i < 5; i++)
@@ -406,6 +415,17 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return questions;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         public static bool CheckUserVerificationInformation(string Username, PersonalVerificationAnswers personalVerificationAnswers)
@@ -514,6 +534,7 @@ namespace YouChatServer.UserDetails
 
         public static bool AreFriends(string Username, string FriendUsername)
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -524,7 +545,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.AddWithValue("@Username", Username);
 
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
                     // Check each column for the desired value
@@ -550,6 +571,17 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static int SetUserOnline(string username)
         {
@@ -573,6 +605,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         public static int SetUserOffline(string username)
@@ -600,6 +639,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
 
 
@@ -618,13 +664,19 @@ namespace YouChatServer.UserDetails
                 int c = (int)cmd.ExecuteScalar();
                 connection.Close();
                 return c;
-
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         private static string CreateSqlCommandTextForUserPastPasswordsInserting(string Username, string Md5Password)
@@ -705,6 +757,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static bool IsFriendRequestPending(string SenderUsername, string ReceiverUsername)
         {
@@ -733,7 +792,10 @@ namespace YouChatServer.UserDetails
             }
             finally
             {
-                connection.Close(); // Close connection in the finally block
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
 
@@ -762,6 +824,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static int AddFriendRequest(string FriendRequestSenderUsername, string FriendRequestReceiverUsername)
         {
@@ -786,6 +855,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         //public static string CheckFriendRequests(string username)
@@ -832,8 +908,44 @@ namespace YouChatServer.UserDetails
         //        return Usernames;
         //    }
         //}
+        public static DateTime GetFriendRequestDate(string SenderUsername, string ReceiverUsername, DateTime currentTime)
+        {
+            DateTime RequestDate = currentTime;
+            try
+            {
+                cmd.Connection = connection;
+                string sql = "SELECT TOP 1 RequestDate FROM FriendRequest WHERE SenderUsername = @SenderUsername AND ReceiverUsername = @ReceiverUsername AND RequestStatus = 'Pending' ORDER BY RequestDate DESC";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@SenderUsername", SenderUsername);
+                cmd.Parameters.AddWithValue("@ReceiverUsername", ReceiverUsername);
+                connection.Open();
+                object result = cmd.ExecuteScalar();
+                // Check if a result was found
+                if (result != null && result != DBNull.Value)
+                {
+                    RequestDate = (DateTime)result;
+                }
+                connection.Close();
+                return RequestDate;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return RequestDate;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
+        }
         public static List<PastFriendRequest> CheckFriendRequests(string username)
         {
+            SqlDataReader Reader = null;
             List<PastFriendRequest> pastFriendRequests = new List<PastFriendRequest>();
             try
             {
@@ -843,7 +955,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 string friendUsername = "";
                 DateTime requestDate = DateTime.Now;
                 while (Reader.Read())
@@ -862,6 +974,17 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return null;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         public static int HandleFriendRequestStatus(string SenderUsername, string ReceiverUsername, string FriendRequestStatus)
@@ -888,6 +1011,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         //public static int AddFriend(string UsernameAdding, string UsernameAdded)
@@ -943,6 +1073,7 @@ namespace YouChatServer.UserDetails
         }
         public static string GetFriendColumnToInsert(string Username, SqlTransaction transaction) //will be used in order to find where is the first null value...
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -953,7 +1084,7 @@ namespace YouChatServer.UserDetails
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", Username);
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 string columnName = "";
                 if (Reader.Read())
                 {
@@ -977,9 +1108,18 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return "";
             }
+            finally
+            {
+                // Ensure the reader is closed even if an exception occurred
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+            }
         }
         public static List<string> GetFriendList(string username)
         {
+            SqlDataReader Reader = null;
             StringBuilder Friends = new StringBuilder();
             List<string> friends = new List<string>(); //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
             // if true i need to send the user a message and then he will add those friend requests to his friend request area...
@@ -992,7 +1132,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", username);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
                     for (int i = 2; i < Reader.FieldCount; i++) // 0- id/ 1-username, 2,3,4 - friends names...
@@ -1017,6 +1157,17 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return friends;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         //public static Dictionary<string, string> GetFriendsProfileInformation(string Friends)
@@ -1104,8 +1255,11 @@ namespace YouChatServer.UserDetails
                 ContactDetails contact;
                 foreach (string friendName in FriendNames)
                 {
-                    contact = GetFriendProfileInformation(friendName);
-                    contactList.Add(contact);
+                    if (friendName != "")
+                    {
+                        contact = GetFriendProfileInformation(friendName);
+                        contactList.Add(contact);
+                    }
                 }
                 contacts = new Contacts(contactList);
                 return contacts;
@@ -1122,6 +1276,7 @@ namespace YouChatServer.UserDetails
         public static ContactDetails GetFriendProfileInformation(string FriendName) //will be used when logging in a loop to get all friends info + when creating a new friends and needing his details...
         {
             ContactDetails contact = null;
+            SqlDataReader Reader = null;
             try
             {
                 string TagLine = "";
@@ -1141,7 +1296,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@FriendName", FriendName);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
                     TagLine = Reader.GetString(0); 
@@ -1167,8 +1322,17 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return contact;
             }
-
-
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
 
 
@@ -1198,6 +1362,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return false;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
 
@@ -1234,6 +1405,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
 
         public static bool TaglineIsExist(string Tagline, string DataBaseTableName, bool HandleConnection)
@@ -1247,7 +1425,7 @@ namespace YouChatServer.UserDetails
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Tagline", Tagline);
-                if (HandleConnection )
+                if (HandleConnection)
                 {
                     connection.Open();
                 }
@@ -1266,6 +1444,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return false;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
 
@@ -1301,6 +1486,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
 
         public static bool ProfilePictureIsExist(string Username) //should be asked in the login part
@@ -1328,6 +1520,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static int InsertProfilePicture(string Username, string ProfilePictureID)
         {
@@ -1351,6 +1550,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static int InsertStatus(string Username, string Status)
         {
@@ -1373,6 +1579,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return 0;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         public static int UpdateChatSettings(string Username, byte TextSizeProperty, short MessageGapProperty, bool EnterKeyPressedProperty)
@@ -1399,6 +1612,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static bool StatusIsExist(string Username)//should be asked in the login part if the profilepictureisexist returns true...
         {
@@ -1424,6 +1644,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return false;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         public static DateTime GetLastPasswordUpdateDate(string Username)
@@ -1453,6 +1680,13 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return new DateTime(); //needs to do a check if thats a new datetime with no value
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
 
@@ -1485,6 +1719,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return "";
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static string GetProfilePicture(string Username)
         {
@@ -1515,9 +1756,17 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return "";
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static JsonClasses.UserDetails GetUserProfileSettings(string Username)
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -1537,7 +1786,7 @@ namespace YouChatServer.UserDetails
                 int MessageGapProperty = 10;
                 bool EnterKeyPressedProperty = false;
                 string TagLineId = "";
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
                     // Access the specific columns you selected
@@ -1563,6 +1812,17 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return null;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
 
         }
@@ -1604,12 +1864,20 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
 
       
 
         public static bool PasswordIsExist(string Username, string Password)
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -1621,7 +1889,7 @@ namespace YouChatServer.UserDetails
                 string Md5Password = YouChatServer.Encryption.MD5.CreateMD5Hash(Password);
 
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
                     // Check each column for the desired value
@@ -1647,9 +1915,21 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static string GetPasswordColumnToInsert(string Username) //will be used in order to find where is the first null value...
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -1660,7 +1940,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 string columnName = "";
                 if (Reader.Read())
                 {
@@ -1686,9 +1966,21 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return "";
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static bool CheckFullPasswordCapacity(string Username) //to call to this method when i need to decide to add a new column for another password
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -1698,7 +1990,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 if (Reader.Read()) // Check if a row was found
                 {
                     for (int i = 0; i < Reader.FieldCount; i++)
@@ -1723,9 +2015,21 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static bool CheckFullFriendsCapacity(string Username) //to call to this method when i need to decide to add a new column for another password
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -1735,7 +2039,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 if (Reader.Read()) // Check if a row was found
                 {
                     for (int i = 0; i < Reader.FieldCount; i++)
@@ -1759,6 +2063,17 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return false;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
         public static void AddColumnToUserPastPasswords() //after this i need to add the new password... //todo - improve duplicate code for add column
@@ -1917,6 +2232,7 @@ namespace YouChatServer.UserDetails
         }
         private static void AddColumnToTable(string tableName)
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -1926,7 +2242,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@TableName", tableName);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
 
                 string lastColumnName = null;
 
@@ -1980,21 +2296,31 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
-        public static int CreateGroupChat(ChatCreator chat) //for when i want to add another particiapnt i need to first give him the group tagline as well becuase there might be couple group with the same name
+        public static int CreateGroupChat(ChatCreator chat, string ChatTagLine) //for when i want to add another particiapnt i need to first give him the group tagline as well becuase there might be couple group with the same name
         {
             try
             {
-                string ChatName = chat._chatName;
-                List<string> ChatMembers = chat._chatParticipants;
+                string ChatName = chat.ChatName;
+                List<string> ChatMembers = chat.ChatParticipants;
                 string FirstChatMember = ChatMembers[0];
                 System.Drawing.Image ChatIcon;
-                byte[] ChatIconBytes = chat._chatProfilePictureBytes;
+                byte[] ChatIconBytes = chat.ChatProfilePictureBytes;
                 using (MemoryStream ms = new MemoryStream(ChatIconBytes))
                 {
                     ChatIcon = System.Drawing.Image.FromStream(ms);
                 }
-                string ChatTagLine = SetTagLine("GroupChats","DirectChats");
                 cmd.Connection = connection;
                 //string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
                 string sql = "INSERT INTO GroupChats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES(@ChatName, @ChatTagLine, @ChatIcon, @FirstChatMember)";
@@ -2028,6 +2354,14 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
+
         }
         public static bool HandleDirectChatCreation(string ChatTagLine, string FriendRequestSenderUsername, string FriendRequestReceiverUsername, string MessageHistoryFilePath)
         {
@@ -2164,6 +2498,13 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static int AddNewChatMember(string ChatName, string ChatTagLine, string Username)
         {
@@ -2190,9 +2531,17 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return 0;
             }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static bool DeleteGroupChatMember(string ChatName, string ChatTagLine, string Username)
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -2202,7 +2551,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);
                 cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 string columnName = "";
                 if (Reader.Read())
                 {
@@ -2236,9 +2585,21 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return false;
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
         public static string GetChatMemberColumnToInsert(string ChatName, string ChatTagLine) //will be used in order to find where is the first null value...
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -2249,7 +2610,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);
                 cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 string columnName = "";
                 if (Reader.Read())
                 {
@@ -2275,9 +2636,22 @@ namespace YouChatServer.UserDetails
                 Console.WriteLine(ex.Message);
                 return "";
             }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
         }
+
         public static bool CheckFullChatsCapacity(string ChatName, string ChatTagLine) //to call to this method when i need to decide to add a new column for another password
         {
+            SqlDataReader Reader = null;
             try
             {
                 cmd.Connection = connection;
@@ -2288,7 +2662,7 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);
                 cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
                 connection.Open();
-                SqlDataReader Reader = cmd.ExecuteReader();
+                Reader = cmd.ExecuteReader();
                 if (Reader.Read()) // Check if a row was found
                 {
                     for (int i = 7; i < Reader.FieldCount; i++)
@@ -2312,6 +2686,17 @@ namespace YouChatServer.UserDetails
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
                 return false;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
             }
         }
     }
