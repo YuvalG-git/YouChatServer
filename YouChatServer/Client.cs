@@ -16,6 +16,7 @@ using YouChatServer.JsonClasses;
 using YouChatServer.CaptchaHandler;
 using YouChatServer.ClientAttemptsStateHandler;
 using YouChatServer.ContactHandler;
+using YouChatServer.UdpHandler;
 
 namespace YouChatServer
 {
@@ -84,7 +85,7 @@ namespace YouChatServer
         private string _ClientNick;
 
         private bool _isOnline;
-
+        private bool _inCall;
         /// <summary>
         /// Represents the overall ID of the player
         /// </summary>
@@ -284,6 +285,7 @@ namespace YouChatServer
             captchaRotatingImageHandler = new CaptchaRotatingImageHandler();
             _LoginFailedAttempts = new ClientAttemptsState(this,EnumHandler.UserAuthentication_Enum.Login);
             _isOnline = false;
+            _inCall = false;
             //ClientAttemptsState clientAttemptsState = null;
             //InitializeClientAttemptsStateObject(ref clientAttemptsState);
 
@@ -1099,8 +1101,23 @@ namespace YouChatServer
                 }
             }
             IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
-            clientKeys.Add(iPEndPoint, SymmetricKey);
-            JsonObject udpAudioConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionResponse, null);
+            
+            foreach (var entry in AudioUdpHandler.EndPoints.ToList())
+            {
+                if (entry.Key.Equals(_clientIPEndPoint))
+                {
+                    AudioUdpHandler.EndPoints.Remove(entry.Key);
+                    AudioUdpHandler.EndPoints[iPEndPoint] = entry.Value;
+                }
+                else if (entry.Value.Equals(_clientIPEndPoint))
+                {
+                    AudioUdpHandler.EndPoints[entry.Key] = iPEndPoint;
+                }
+            }
+            string udpSymmetricKey = RandomStringCreator.RandomString(32);
+            string EncryptedSymmerticKey = Rsa.Encrypt(udpSymmetricKey, ClientPublicKey);
+            clientKeys.Add(iPEndPoint, udpSymmetricKey);
+            JsonObject udpAudioConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionResponse, EncryptedSymmerticKey);
             string udpAudioConnectionRequestJson = JsonConvert.SerializeObject(udpAudioConnectionRequestJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
@@ -1356,6 +1373,160 @@ namespace YouChatServer
                 //needs to send this group creation to every logged user...
             }      
         }
+        private void HandleVideoCallRequestEnum(JsonObject jsonObject)
+        {
+            string chatId = jsonObject.MessageBody as string;
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
+            {
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (UserIsOnline(friendName) && !isUserInCall(friendName) && !isUserInCall(_ClientNick))
+                {
+                    JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Sender, null);
+                    string SenderSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(SenderSuccessfulVideoCallResponsJson);
+
+                    JsonObject recieverSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever, chatId);
+                    string recieverSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(recieverSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    Unicast(recieverSuccessfulVideoCallResponsJson, friendName);
+
+                    _inCall = true;
+                    SetUserInCall(friendName, true);
+                }
+                else
+                {
+                    JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedVideoCallResponse, null);
+                    string SenderSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(SenderSuccessfulVideoCallResponsJson);
+                }
+            }
+            catch
+            {
+
+            }
+        }
+        private void HandleVideoCallAcceptanceRequestEnum(JsonObject jsonObject)
+        {
+            string chatId = jsonObject.MessageBody as string;
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
+            {
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
+                {
+                    JsonObject videoCallDenialResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceResponse, chatId);
+                    string videoCallDenialResponseJson = JsonConvert.SerializeObject(videoCallDenialResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(videoCallDenialResponseJson);
+                    Unicast(videoCallDenialResponseJson, friendName);
+                    IPEndPoint friendEndPoint = GetUserEndPoint(friendName);
+                    AudioUdpHandler.EndPoints[_clientIPEndPoint] = friendEndPoint;
+                    AudioUdpHandler.EndPoints[friendEndPoint] = _clientIPEndPoint;
+                }
+            }
+            catch
+            {
+                RestartCallInvitation(chatId);
+            }
+        }
+        private void HandleVideoCallDenialRequestEnum(JsonObject jsonObject)
+        {
+            string chatId = jsonObject.MessageBody as string;
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
+            {
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
+                {
+                    JsonObject videoCallDenialResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.VideoCallDenialResponse, null);
+                    string videoCallDenialResponseJson = JsonConvert.SerializeObject(videoCallDenialResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    Unicast(videoCallDenialResponseJson, friendName);
+
+                    _inCall = false;
+                    SetUserInCall(friendName, false);
+                }
+            }
+            catch
+            {
+                RestartCallInvitation(chatId);
+            }
+        }
+        private void HandleVideoCallMuteRequestEnum(JsonObject jsonObject)
+        {
+            HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallMuteResponse);
+        }
+        private void HandleVideoCallUnmuteRequestEnum(JsonObject jsonObject)
+        {
+            HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallUnmuteResponse);
+        }
+        private void HandleVideoCallCameraOnRequestEnum(JsonObject jsonObject)
+        {   
+            HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOnResponse);
+        }
+        private void HandleVideoCallCameraOffRequestEnum(JsonObject jsonObject)
+        {
+            HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOffResponse);
+        }
+        private void HandleEndVideoCallRequestEnum(JsonObject jsonObject)
+        {
+            HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Reciever);
+            Console.WriteLine("close");
+            JsonObject endVideoCallResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Reciever, null);
+            string endVideoCallResponseJson = JsonConvert.SerializeObject(endVideoCallResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(endVideoCallResponseJson);
+        }
+        private void HandleVideoCallRequest(JsonObject jsonObject, EnumHandler.CommunicationMessageID_Enum videoCallRequest)
+        {
+            string chatId = jsonObject.MessageBody as string;
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
+            {
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
+                {
+                    JsonObject videoCallMuteResponseJsonObject = new JsonObject(videoCallRequest, null);
+                    string videoCallMuteResponseJson = JsonConvert.SerializeObject(videoCallMuteResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    Unicast(videoCallMuteResponseJson, friendName);
+                }
+            }
+            catch
+            {
+            }
+        }
+        private void RestartCallInvitation(string chatId)
+        {
+            JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever, chatId);
+            string SenderSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(SenderSuccessfulVideoCallResponsJson);
+        }
+
 
         private void ReceiveMessageLength(IAsyncResult ar)
         {
@@ -1536,6 +1707,31 @@ namespace YouChatServer
                             case EnumHandler.CommunicationMessageID_Enum.GroupCreatorRequest:
                                 HandleGroupCreatorRequestEnum(jsonObject);
                                 break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallRequest:
+                                HandleVideoCallRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceRequest:
+                                HandleVideoCallAcceptanceRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallDenialRequest:
+                                HandleVideoCallDenialRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallMuteRequest:
+                                HandleVideoCallMuteRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallUnmuteRequest:
+                                HandleVideoCallUnmuteRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOnRequest:
+                                HandleVideoCallCameraOnRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOffRequest:
+                                HandleVideoCallCameraOffRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.EndVideoCallRequest:
+                                HandleEndVideoCallRequestEnum(jsonObject);
+                                break;
+
                         }
                     }
                     if (isClientConnected)
@@ -2317,6 +2513,38 @@ namespace YouChatServer
                     return true;
             }
             return false;
+        }
+        public bool isUserInCall(string username)
+        {
+            Client client;
+            foreach (DictionaryEntry c in AllClients)
+            {
+                client = (Client)(c.Value);
+                if (client._ClientNick == username && client._inCall) //לבדוק גם אם הוא online...
+                    return true;
+            }
+            return false;
+        }
+        public void SetUserInCall(string username, bool value)
+        {
+            Client client;
+            foreach (DictionaryEntry c in AllClients)
+            {
+                client = (Client)(c.Value);
+                if (client._ClientNick == username) //לבדוק גם אם הוא online...
+                    client._inCall = value;
+            }
+        }
+        public IPEndPoint GetUserEndPoint(string username)
+        {
+            Client client;
+            foreach (DictionaryEntry c in AllClients)
+            {
+                client = (Client)(c.Value);
+                if (client._ClientNick == username)
+                    return client._clientIPEndPoint;
+            }
+            return null;
         }
 
 

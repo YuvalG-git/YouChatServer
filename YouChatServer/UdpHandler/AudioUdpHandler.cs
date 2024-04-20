@@ -11,6 +11,7 @@ namespace YouChatServer.UdpHandler
     internal class AudioUdpHandler
     {
         private static UdpClient AudioUdpClient;//udp audio listener object
+        public static Dictionary<IPEndPoint, IPEndPoint> EndPoints = new Dictionary<IPEndPoint, IPEndPoint>();
 
         public static void StartAudioUdpClient()
         {
