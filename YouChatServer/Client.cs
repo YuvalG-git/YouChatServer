@@ -17,6 +17,7 @@ using YouChatServer.CaptchaHandler;
 using YouChatServer.ClientAttemptsStateHandler;
 using YouChatServer.ContactHandler;
 using YouChatServer.UdpHandler;
+using YouChatServer.JsonClasses.MessageClasses;
 
 namespace YouChatServer
 {
@@ -879,10 +880,24 @@ namespace YouChatServer
         {
             if (_ClientNick != null)
             {
-                if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
+                DateTime dateTime = DateTime.Now.AddYears(-1);
+                DateTime currentDateTime = DataHandler.SetUserOffline(_ClientNick, dateTime);
+                if (currentDateTime.CompareTo(dateTime)  > 0)
                 {
                     //was ok...
                     _isOnline = false;
+                    OfflineDetails offlineDetails = new OfflineDetails(_ClientNick, currentDateTime);
+                    List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
+                    
+                    JsonObject offlineUpdateJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.OfflineUpdate, offlineDetails);
+                    string offlineUpdateJson = JsonConvert.SerializeObject(offlineUpdateJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    foreach (string friendName in friendNames)
+                    {
+                        Unicast(offlineUpdateJson, friendName);
+                    }
                 }
             }
             NetworkStream stream = _client.GetStream();
@@ -956,7 +971,8 @@ namespace YouChatServer
                 {
                     messageType = "Image";
                     byte[] imageMessageContentByteArray = imageMessageContent.ImageBytes;
-                    string imageMessageContentString = imageMessageContentByteArray.ToString();
+                    string imageMessageContentString = Convert.ToBase64String(imageMessageContentByteArray);
+
                     messageContentAsString = imageMessageContentString;
                     lastMessageContentValue = "Image";
                 }
@@ -1325,6 +1341,7 @@ namespace YouChatServer
         {
             List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
             Contacts contacts = DataHandler.GetFriendsProfileInformation(friendNames);
+  
             DataHandler.PrintTable("Friends");
             JsonObject contactsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ContactInformationResponse, contacts);
             string contactsJson = JsonConvert.SerializeObject(contactsJsonObject, new JsonSerializerSettings
@@ -1332,6 +1349,17 @@ namespace YouChatServer
                 TypeNameHandling = TypeNameHandling.Auto
             });
             SendMessage(contactsJson);
+
+
+            JsonObject onlineUpdateJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.OnlineUpdate, _ClientNick);
+            string onlineUpdateJson = JsonConvert.SerializeObject(onlineUpdateJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            foreach (string friendName in friendNames)
+            {
+                Unicast(onlineUpdateJson, friendName);
+            }
         }
         private void HandleChatInformationRequestEnum(JsonObject jsonObject)
         {
@@ -1468,6 +1496,59 @@ namespace YouChatServer
                 RestartCallInvitation(chatId);
             }
         }
+        private void HandleMessageHistoryRequestEnum(JsonObject jsonObject)
+        {
+            string chatId = jsonObject.MessageBody as string;
+            XmlFileManager xmlFileManager = ChatHandler.ChatHandler.ChatFileManagers[chatId];
+            List<MessageData> messageDatas =  xmlFileManager.ReadChatXml();
+            List<JsonClasses.Message> messages = new List<JsonClasses.Message>();
+            string messageSenderName;
+            object messageContent = null;
+            DateTime messageDateAndTime;
+            foreach (MessageData messageData in messageDatas)
+            {
+                if (DateTime.TryParse(messageData.Date, out DateTime dateTime))
+                {
+                    messageDateAndTime = dateTime;
+                }
+                else
+                {
+                    throw new ArgumentException("Invalid date format.");
+                }
+                switch (messageData.Type)
+                {
+                    case "Text":
+                        messageContent = messageData.Content;
+                        break;
+                    case "Image":
+                        if (!string.IsNullOrEmpty(messageData.Content))
+                        {
+                            // Convert string to byte array
+                            byte[] imageData = Convert.FromBase64String(messageData.Content);
+                            ImageContent imageContent = new ImageContent(imageData);
+                            messageContent = imageContent;
+                        }
+                        else
+                        {
+                            throw new ArgumentException("Invalid content type for Image.");
+                        }
+                        break;
+                    case "DeletedMessage":
+                        messageContent = "";
+                        break;
+                }
+                messageSenderName = messageData.Sender;
+                JsonClasses.Message message = new JsonClasses.Message(messageSenderName, chatId, messageContent, messageDateAndTime);
+                messages.Add(message);
+            }
+            MessageHistory messageHistory = new MessageHistory(messages);
+            JsonObject messageHistoryResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.MessageHistoryResponse, messageHistory);
+            string messageHistoryResponseJson = JsonConvert.SerializeObject(messageHistoryResponseJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(messageHistoryResponseJson);
+        }
         private void HandleVideoCallMuteRequestEnum(JsonObject jsonObject)
         {
             HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallMuteResponse);
@@ -1511,6 +1592,9 @@ namespace YouChatServer
                         TypeNameHandling = TypeNameHandling.Auto
                     });
                     Unicast(videoCallMuteResponseJson, friendName);
+
+                    _inCall = false;
+                    SetUserInCall(friendName, false);
                 }
             }
             catch
@@ -1730,6 +1814,9 @@ namespace YouChatServer
                                 break;
                             case EnumHandler.CommunicationMessageID_Enum.EndVideoCallRequest:
                                 HandleEndVideoCallRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.MessageHistoryRequest:
+                                HandleMessageHistoryRequestEnum(jsonObject);
                                 break;
 
                         }

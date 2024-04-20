@@ -243,4 +243,22 @@ it's me</Content>
     <Content>hi</Content>
     <Date>2024-04-20 17:28:24</Date>
   </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-20 19:40:53</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>what just happend?</Content>
+    <Date>2024-04-20 19:41:01</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>that's really weird</Content>
+    <Date>2024-04-20 19:41:13</Date>
+  </Message>
 </Chat>

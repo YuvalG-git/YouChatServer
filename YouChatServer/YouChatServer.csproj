@@ -101,6 +101,9 @@
     <Compile Include="JsonClasses\ContactAndChat.cs" />
     <Compile Include="JsonClasses\EncryptionKeys.cs" />
     <Compile Include="JsonClasses\FriendRequestControlDetails.cs" />
+    <Compile Include="JsonClasses\MessageClasses\MessageData.cs" />
+    <Compile Include="JsonClasses\MessageClasses\MessageHistory.cs" />
+    <Compile Include="JsonClasses\OfflineDetails.cs" />
     <Compile Include="JsonClasses\PastFriendRequest.cs" />
     <Compile Include="JsonClasses\FriendRequestDetails.cs" />
     <Compile Include="JsonClasses\FriendRequestResponseDetails.cs" />

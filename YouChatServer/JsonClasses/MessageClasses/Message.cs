@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace YouChatServer.JsonClasses
 {
-    internal class Message
+    public class Message
     {
         private string _messageSenderName;
         private string _chatId;

@@ -616,9 +616,8 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        public static int SetUserOffline(string username)
+        public static DateTime SetUserOffline(string username, DateTime currentDateTime)
         {
-            //set the user offline and set the last seen time to now...
             try
             {
                 DateTime LastSeenTime = DateTime.Now;
@@ -633,13 +632,13 @@ namespace YouChatServer.UserDetails
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
-                return x;
+                return LastSeenTime;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.ToString());
                 Console.WriteLine(ex.Message);
-                return 0;
+                return currentDateTime;
             }
             finally
             {

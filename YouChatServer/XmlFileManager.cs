@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.Xml;
+using YouChatServer.JsonClasses.MessageClasses;
 
 namespace YouChatServer
 {
@@ -284,6 +285,39 @@ namespace YouChatServer
             }
 
             return doc;
+        }
+        public List<MessageData> ReadChatXml()
+        {
+            List<MessageData> messages = new List<MessageData>();
+
+            try
+            {
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.Load(_filename);
+
+                XmlElement root = xmlDoc.DocumentElement;
+
+                string chatName = root.SelectSingleNode("ChatName").InnerText;
+                string participants = root.SelectSingleNode("Participants").InnerText;
+
+                XmlNodeList messageNodes = root.SelectNodes("Message");
+                foreach (XmlNode messageNode in messageNodes)
+                {
+                    string sender = messageNode.SelectSingleNode("Sender").InnerText;
+                    string type = messageNode.SelectSingleNode("Type").InnerText;
+                    string content = messageNode.SelectSingleNode("Content").InnerText;
+                    string date = messageNode.SelectSingleNode("Date").InnerText;
+
+                    MessageData message = new MessageData(sender, type, content, date);
+                    messages.Add(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading XML file: {ex.Message}");
+            }
+
+            return messages;
         }
 
     }
