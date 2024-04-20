@@ -1,0 +1,22 @@
+<Chat>
+  <ChatName>8YQNGG</ChatName>
+  <Participants>yuval, benben, einat, sivan</Participants>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>how you been doing?</Content>
+    <Date>2024-04-20 10:57:53</Date>
+  </Message>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>how you been doing?</Content>
+    <Date>2024-04-20 10:57:53</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-20 11:43:51</Date>
+  </Message>
+</Chat>

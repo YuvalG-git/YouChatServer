@@ -1,0 +1,34 @@
+<Chat>
+  <ChatName>TSQMVI</ChatName>
+  <Participants>yuval, einat, sivan, tamar</Participants>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>hiiii</Content>
+    <Date>2024-04-20 10:55:58</Date>
+  </Message>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>hiiii</Content>
+    <Date>2024-04-20 10:55:58</Date>
+  </Message>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>hello</Content>
+    <Date>2024-04-20 10:57:44</Date>
+  </Message>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>hello</Content>
+    <Date>2024-04-20 10:57:44</Date>
+  </Message>
+  <Message>
+    <Sender>einat</Sender>
+    <Type>Text</Type>
+    <Content>sup</Content>
+    <Date>2024-04-20 11:45:38</Date>
+  </Message>
+</Chat>

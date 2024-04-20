@@ -251,10 +251,10 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        public static List<ChatHandler.ChatDetails> GetChats(string tableName, SqlTransaction transaction)
+        public static List<ChatDetails> GetChats(string tableName, SqlTransaction transaction)
         {
             SqlDataReader Reader = null;
-            List<ChatHandler.ChatDetails> chats = new List<ChatHandler.ChatDetails>();
+            List<ChatDetails> chats = new List<ChatDetails>();
             try
             {
                 cmd.Connection = connection;
@@ -266,6 +266,7 @@ namespace YouChatServer.UserDetails
                 string messageHistory;
                 DateTime? lastMessageTime;
                 string lastMessageContent;
+                string lastMessageSenderName;
                 List<ChatParticipant> chatParticipants;
                 string chatName;
                 byte[] chatProfilePicture;
@@ -279,6 +280,7 @@ namespace YouChatServer.UserDetails
                     messageHistory = Reader["MessageHistory"].ToString();
                     lastMessageTime = Reader.IsDBNull(Reader.GetOrdinal("LastMessageTime")) ? null : (DateTime?)Reader["LastMessageTime"];
                     lastMessageContent = Reader["LastMessageContent"].ToString();
+                    lastMessageSenderName = Reader["lastMessageSenderName"].ToString();
                     chatParticipants = new List<ChatParticipant>();
                     for (int i = 1; i < Reader.FieldCount; i++)
                     {
@@ -298,16 +300,16 @@ namespace YouChatServer.UserDetails
                             }
                         }
                     }
-                    ChatHandler.ChatDetails chat = null;
+                    ChatDetails chat = null;
                     if (tableName == "DirectChats")
                     {
-                        chat = new DirectChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants);
+                        chat = new DirectChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, lastMessageSenderName, chatParticipants);
                     }
                     else if (tableName == "GroupChats")
                     {
                         chatName = Reader["ChatName"].ToString();
                         chatProfilePicture = (byte[])Reader["ChatProfilePicture"];
-                        chat = new GroupChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, chatParticipants, chatName, chatProfilePicture);
+                        chat = new GroupChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent,lastMessageSenderName, chatParticipants, chatName, chatProfilePicture);
 
                     }
                     if (chat != null)
@@ -1236,7 +1238,28 @@ namespace YouChatServer.UserDetails
         //    }
 
         //}
+        public static void PrintTable(string tableName)
+        {
+            connection.Open();
+            string query = $"SELECT * FROM {tableName}";
 
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                using (SqlDataReader reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            Console.Write(reader[i].ToString() + "\t");
+                        }
+                        Console.WriteLine();
+                    }
+                }
+            }
+            connection.Close();
+
+        }
         public static Contacts GetFriendsProfileInformation(List<string> FriendNames)
         {
             Contacts contacts = null;
@@ -1539,6 +1562,39 @@ namespace YouChatServer.UserDetails
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@ProfilePictureID", ProfilePictureID);
                 cmd.Parameters.AddWithValue("@Username", Username);
+                connection.Open();
+                int x = cmd.ExecuteNonQuery();
+                connection.Close();
+                return x;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return 0;
+            }
+            finally
+            {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
+        }
+        public static int UpdateLastMessageData(string TableName, string ChatId, string LastMessageContent, string LastMessageSenderName, string LastMessageTimeAsString) //needs to send from the client what type of chat is that...
+        {
+            try
+            {
+                cmd.Connection = connection;
+                //string sql = "UPDATE UserDetails SET ProfilePicture = '" + ProfilePictureID + "' WHERE Username = '" + Username + "'";
+                string sql = $"UPDATE {TableName} SET LastMessageContent = @LastMessageContent, LastMessageSenderName = @LastMessageSenderName, LastMessageTime = @LastMessageTime WHERE ChatTagLineId = @ChatTagLineId";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@LastMessageContent", LastMessageContent);
+                cmd.Parameters.AddWithValue("@LastMessageSenderName", LastMessageSenderName);
+                cmd.Parameters.AddWithValue("@LastMessageTime", LastMessageTimeAsString);
+                cmd.Parameters.AddWithValue("@ChatTagLineId", ChatId);
+
                 connection.Open();
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
@@ -2288,6 +2344,7 @@ namespace YouChatServer.UserDetails
 
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
+                    DataTable schemaTable = connection.GetSchema("Columns", new string[] { null, null, tableName, null });
                 }
                 connection.Close();
             }
@@ -2308,27 +2365,24 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        public static int CreateGroupChat(ChatCreator chat, string ChatTagLine) //for when i want to add another particiapnt i need to first give him the group tagline as well becuase there might be couple group with the same name
+        public static int CreateGroupChat(ChatCreator chat, string ChatTagLine, string XmlFilePath) //for when i want to add another particiapnt i need to first give him the group tagline as well becuase there might be couple group with the same name
         {
             try
             {
                 string ChatName = chat.ChatName;
                 List<string> ChatMembers = chat.ChatParticipants;
                 string FirstChatMember = ChatMembers[0];
-                System.Drawing.Image ChatIcon;
                 byte[] ChatIconBytes = chat.ChatProfilePictureBytes;
-                using (MemoryStream ms = new MemoryStream(ChatIconBytes))
-                {
-                    ChatIcon = System.Drawing.Image.FromStream(ms);
-                }
+
                 cmd.Connection = connection;
                 //string Sql = "INSERT INTO Chats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES('" + ChatName + "','" + ChatTagLine + "','" + ChatIcon + "','" + FirstChatMember + "')";
-                string sql = "INSERT INTO GroupChats (ChatName, ChatTagLineId, ChatProfilePicture, [ChatParticipant-1]) VALUES(@ChatName, @ChatTagLine, @ChatIcon, @FirstChatMember)";
+                string sql = "INSERT INTO GroupChats (ChatName, ChatTagLineId, ChatProfilePicture, MessageHistory, [ChatParticipant-1]) VALUES(@ChatName, @ChatTagLine, @ChatIcon, @MessageHistory, @FirstChatMember)";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear(); // Clear previous parameters
                 cmd.Parameters.AddWithValue("@ChatName", ChatName);
                 cmd.Parameters.AddWithValue("@ChatTagLine", ChatTagLine);
-                cmd.Parameters.AddWithValue("@ChatIcon", ChatIcon);
+                cmd.Parameters.AddWithValue("@ChatIcon", ChatIconBytes);
+                cmd.Parameters.AddWithValue("@MessageHistory", XmlFilePath);
                 cmd.Parameters.AddWithValue("@FirstChatMember", FirstChatMember);
 
                 //now i need to add the other members...
@@ -2371,19 +2425,16 @@ namespace YouChatServer.UserDetails
                 connection.Open();
                 transaction = connection.BeginTransaction();
 
-                // Add the first friend request
                 if (AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername, transaction) == 0)
                 {
-                    throw new Exception("Failed to add friend request.");
+                    throw new Exception("Failed to add first friend.");
                 }
 
-                // Add the friend request in reverse
                 if (AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername, transaction) == 0)
                 {
-                    throw new Exception("Failed to add friend request in reverse.");
+                    throw new Exception("Failed to add second friend.");
                 }
 
-                // Create a direct chat
                 if (CreateDirectChat(ChatTagLine, FriendRequestSenderUsername, FriendRequestReceiverUsername, MessageHistoryFilePath, transaction) == 0)
                 {
                     throw new Exception("Failed to create direct chat.");

@@ -6,26 +6,15 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.Drawing;
 using YouChatServer.Encryption;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using Image = System.Drawing.Image;
-using System.Threading;
-using System.Net.Mail;
 using YouChatServer.UserDetails;
 using Newtonsoft.Json;
 using YouChatServer.ChatHandler;
-using System.CodeDom;
 using YouChatServer.JsonClasses;
 using YouChatServer.CaptchaHandler;
 using YouChatServer.ClientAttemptsStateHandler;
-using YouChatServer.JsonClasses.MessageClasses;
 using YouChatServer.ContactHandler;
 
 namespace YouChatServer
@@ -356,24 +345,38 @@ namespace YouChatServer
             if ((DataHandler.isMatchingUsernameAndPasswordExist(username, password)) && (!UserIsConnected(username)))
             {
                 _ClientNick = username;
-                string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
-                if (emailAddress != "")
+
+
+                if (DataHandler.SetUserOnline(_ClientNick) > 0)
                 {
-                    smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
-                    //ClientAttemptsState clientAttemptsState = null;
-                    //InitializeClientAttemptsStateObject(ref clientAttemptsState);
-                    _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
-                    JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage, null);
-                    string smtpLoginMessageJson = JsonConvert.SerializeObject(smtpLoginMessageJsonObject, new JsonSerializerSettings
+                    _isOnline = true;
+                    JsonObject personalVerificationAnswersResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_OpenChat, null);
+                    string personalVerificationAnswersResponseJson = JsonConvert.SerializeObject(personalVerificationAnswersResponseJsonObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.Auto
                     });
-                    SendMessage(smtpLoginMessageJson);
+                    SendMessage(personalVerificationAnswersResponseJson);
                 }
-                else //shouldn't get here - emailaddress won't be empty...
-                {
-                    SendFailedLoginMessage();
-                }
+
+
+                //string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
+                //if (emailAddress != "")
+                //{
+                //    smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
+                //    //ClientAttemptsState clientAttemptsState = null;
+                //    //InitializeClientAttemptsStateObject(ref clientAttemptsState);
+                //    _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
+                //    JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage, null);
+                //    string smtpLoginMessageJson = JsonConvert.SerializeObject(smtpLoginMessageJsonObject, new JsonSerializerSettings
+                //    {
+                //        TypeNameHandling = TypeNameHandling.Auto
+                //    });
+                //    SendMessage(smtpLoginMessageJson);
+                //}
+                //else //shouldn't get here - emailaddress won't be empty...
+                //{
+                //    SendFailedLoginMessage();
+                //}
             }
             else
             {
@@ -647,7 +650,7 @@ namespace YouChatServer
                     if (DataHandler.HandleDirectChatCreation(ChatTagLine, FriendRequestSenderUsername, FriendRequestReceiverUsername, filePath))
                     {
                         List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
-                        ChatHandler.ChatDetails chat = new DirectChatDetails(ChatTagLine, filePath, null, "", chatParticipants);
+                        ChatHandler.ChatDetails chat = new DirectChatDetails(ChatTagLine, filePath, null, "", "", chatParticipants);
                         ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
 
                         DirectChatDetails directChat = (DirectChatDetails)chat;
@@ -661,15 +664,19 @@ namespace YouChatServer
                         });
                         SendMessage(friendRequestSenderUsernameContactAndChatJson);
 
-                        ContactDetails friendRequestReceiverUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestReceiverUsername);
-                        ContactAndChat friendRequestReceiverUsernameContactAndChat = new ContactAndChat(directChat, friendRequestReceiverUsernameContact);
-
-                        JsonObject friendRequestReceiverUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestReceiverUsernameContactAndChat);
-                        string friendRequestReceiverUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestReceiverUsernameContactAndChatJsonObject, new JsonSerializerSettings
+                       
+                        if (UserIsOnline(FriendRequestSenderUsername))
                         {
-                            TypeNameHandling = TypeNameHandling.Auto
-                        });
-                        Unicast(friendRequestReceiverUsernameContactAndChatJson, FriendRequestSenderUsername);
+                            ContactDetails friendRequestReceiverUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestReceiverUsername);
+                            ContactAndChat friendRequestReceiverUsernameContactAndChat = new ContactAndChat(directChat, friendRequestReceiverUsernameContact);
+
+                            JsonObject friendRequestReceiverUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestReceiverUsernameContactAndChat);
+                            string friendRequestReceiverUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestReceiverUsernameContactAndChatJsonObject, new JsonSerializerSettings
+                            {
+                                TypeNameHandling = TypeNameHandling.Auto
+                            });
+                            Unicast(friendRequestReceiverUsernameContactAndChatJson, FriendRequestSenderUsername);
+                        }
                     }
                     else
                     {
@@ -729,10 +736,10 @@ namespace YouChatServer
             string dateOfBirthAsString = dateOfBirth.ToString("yyyy-MM-dd");
             string registrationDateAsString = registrationDate.ToString("yyyy-MM-dd");
 
-            if (!UserDetails.DataHandler.usernameIsExist(username) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
+            if (!DataHandler.usernameIsExist(username) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
             {
                 EnumHandler.CommunicationMessageID_Enum RegistrationResponseEnum;
-                if (UserDetails.DataHandler.InsertUser(username,password,firstName,lastName,emailAddress,cityName,gender,dateOfBirthAsString,registrationDateAsString,VerificationQuestionsAndAnswers) > 0)
+                if (DataHandler.InsertUser(username, password, firstName, lastName, emailAddress, cityName, gender, dateOfBirthAsString, registrationDateAsString, VerificationQuestionsAndAnswers) > 0)
                 {
                     _RegistrationFailedAttempts = null;
                     _RegistrationSmtpFailedAttempts = null;
@@ -760,7 +767,6 @@ namespace YouChatServer
                 }
                 HandleFailedAttempt(_RegistrationFailedAttempts, EnumHandler.CommunicationMessageID_Enum.RegistrationBanStart, SendFailedRegistration);
             }
-
         }
         private void SendFailedRegistration()
         {
@@ -867,7 +873,7 @@ namespace YouChatServer
             });
             SendMessage(captchaBitmapContentJson);
         }
-        private void HandleDisconnectEnum(JsonObject jsonObject)
+        private void HandleDisconnectEnum()
         {
             if (_ClientNick != null)
             {
@@ -925,35 +931,55 @@ namespace YouChatServer
         {
             JsonClasses.Message message = jsonObject.MessageBody as JsonClasses.Message;
             string messageSenderName = message.MessageSenderName;
-            string chatId = message.ChatId;
-            DateTime messageDateTime = message.MessageDateAndTime;
-            XmlFileManager xmlFileManager = ChatHandler.ChatHandler.ChatFileManagers[chatId];
-            object messageContent = message.MessageContent;
-            if (jsonObject.MessageBody is string textMessageContent)
+            if (messageSenderName == _ClientNick)
             {
-                xmlFileManager.AppendMessage(messageSenderName, "Text", textMessageContent, messageDateTime);
+                string chatId = message.ChatId;
 
-            }
-            else if (jsonObject.MessageBody is ImageContent imageMessageContent)
-            {
-                byte[] imageMessageContentByteArray = imageMessageContent.ImageBytes;
-                string imageMessageContentString = imageMessageContentByteArray.ToString();
-                xmlFileManager.AppendMessage(messageSenderName, "Image", imageMessageContentString, messageDateTime);
+                DateTime messageDateTime = message.MessageDateAndTime;
+                XmlFileManager xmlFileManager = ChatHandler.ChatHandler.ChatFileManagers[chatId];
+                object messageContent = message.MessageContent;
 
-            }
-            else if (jsonObject.MessageBody is ContactMessage contactMessageContent)
-            {
-                string username = contactMessageContent.Username;
-                string profilePicture = contactMessageContent.ProfilePicture;
-                xmlFileManager.AppendMessage(messageSenderName, "Contact", username + "\n" + profilePicture, messageDateTime);
-            }
-            JsonObject messageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SendMessageResponse, message);
-            string messageJson = JsonConvert.SerializeObject(messageJsonObject, new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.Auto
-            });
-            SendChatMessage(messageJson,chatId);
-            //Multicast(sendMessageResponse, messageContent);
+                ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+                chat.LastMessageTime = messageDateTime;
+                string lastMessageContentValue = "";
+                string messageType = "";
+                string messageContentAsString = "";
+                if (messageContent is string textMessageContent)
+                {
+                    messageType = "Text";
+                    messageContentAsString = textMessageContent;
+                    lastMessageContentValue = textMessageContent;
+                }
+                else if (messageContent is ImageContent imageMessageContent)
+                {
+                    messageType = "Image";
+                    byte[] imageMessageContentByteArray = imageMessageContent.ImageBytes;
+                    string imageMessageContentString = imageMessageContentByteArray.ToString();
+                    messageContentAsString = imageMessageContentString;
+                    lastMessageContentValue = "Image";
+                }
+                chat.LastMessageContent = lastMessageContentValue;
+                chat.LastMessageSenderName = messageSenderName;
+                string TableName = "";
+                if (chat is DirectChatDetails)
+                    TableName = "DirectChats";
+                else if (chat is GroupChatDetails)
+                    TableName = "GroupChats";
+                //string messageDateTimeAsString = messageDateTime.ToString("yyyy-MM-dd HH-mm-ss");
+                string messageDateTimeAsString = messageDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+                if (DataHandler.UpdateLastMessageData(TableName, chatId, lastMessageContentValue, messageSenderName, messageDateTimeAsString) > 0)
+                {
+                    xmlFileManager.AppendMessage(messageSenderName, messageType, messageContentAsString, messageDateTime);
+
+                    JsonObject messageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SendMessageResponse, message);
+                    string messageJson = JsonConvert.SerializeObject(messageJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendChatMessage(messageJson, chatId);
+                }
+               
+            }      
         }
         private void HandlePasswordUpdateRequestEnum(JsonObject jsonObject)
         {
@@ -1149,6 +1175,7 @@ namespace YouChatServer
                 }
                 else if (DataHandler.SetUserOnline(_ClientNick) > 0)
                 {
+                    _isOnline = true;
                     PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_OpenChat;
                 }
                 else
@@ -1281,6 +1308,7 @@ namespace YouChatServer
         {
             List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
             Contacts contacts = DataHandler.GetFriendsProfileInformation(friendNames);
+            DataHandler.PrintTable("Friends");
             JsonObject contactsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ContactInformationResponse, contacts);
             string contactsJson = JsonConvert.SerializeObject(contactsJsonObject, new JsonSerializerSettings
             {
@@ -1302,30 +1330,31 @@ namespace YouChatServer
         private void HandleGroupCreatorRequestEnum(JsonObject jsonObject)
         {
             ChatCreator newChat = jsonObject.MessageBody as ChatCreator;
-            string xmlFileName = newChat.ChatName; ;
+            string chatName = newChat.ChatName;
+            string xmlFileName = "GroupChat - " + chatName;
             List<string> chatParticipantNames = newChat.ChatParticipants;
             byte[] chatProfilePictrue = newChat.ChatProfilePictureBytes;
             string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats");
             XmlFileManager xmlFileManager = new XmlFileManager(xmlFileName, chatParticipantNames, ChatTagLine); //maybe i should create it before i do handledirectchatcreation and if it dont work to delete it...
             string filePath = xmlFileManager.GetFilePath();
-            if (DataHandler.CreateGroupChat(newChat, ChatTagLine) > 0)
+            if (DataHandler.CreateGroupChat(newChat, ChatTagLine, filePath) > 0)
             {
                 List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
-                ChatHandler.ChatDetails chat = new GroupChatDetails(ChatTagLine, filePath, null, "", chatParticipants, xmlFileName, chatProfilePictrue);
+                ChatHandler.ChatDetails chat = new GroupChatDetails(ChatTagLine, filePath, null, "", "", chatParticipants, chatName, chatProfilePictrue);
                 ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
                 //SendMessage(GroupCreatorResponse, "Group was successfully created");
                 GroupChatDetails groupChat = (GroupChatDetails)chat;
 
-                JsonObject groupChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, groupChat);
+                JsonObject groupChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.GroupCreatorResponse, groupChat);
                 string groupChatJson = JsonConvert.SerializeObject(groupChatJsonObject, new JsonSerializerSettings
                 {
                     TypeNameHandling = TypeNameHandling.Auto
                 });
+                SendMessage(groupChatJson);
                 SendChatMessage(groupChatJson, ChatTagLine);
                 //ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
                 //needs to send this group creation to every logged user...
-            }
-         
+            }      
         }
 
         private void ReceiveMessageLength(IAsyncResult ar)
@@ -1343,8 +1372,7 @@ namespace YouChatServer
                     // if bytesread<1 -> the client disconnected
                     if (bytesRead < 1)
                     {
-                        AllClients.Remove(_clientIP);
-                        Logger.LogUserLogOut("A user has logged out from the server.");
+                        HandleDisconnectEnum();
                         return;
                     }
                     else // client still connected
@@ -1384,8 +1412,7 @@ namespace YouChatServer
                     if (bytesRead < 1)
                     {
                         // remove the client from out list of clients
-                        AllClients.Remove(_clientIP);
-                        Logger.LogUserLogOut("A user has logged out from the server.");
+                        HandleDisconnectEnum();
                         return;
                     }
                     else // client still connected
@@ -1451,7 +1478,7 @@ namespace YouChatServer
                                 HandleSendMessageRequestEnum(jsonObject);
                                 break;
                             case EnumHandler.CommunicationMessageID_Enum.Disconnect:
-                                HandleDisconnectEnum(jsonObject);
+                                HandleDisconnectEnum();
                                 break;
                             case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
                                 HandleUdpAudioConnectionRequestEnum(jsonObject);
@@ -2051,7 +2078,7 @@ namespace YouChatServer
 
                     Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
                     Array.Copy(bytesToSend, 0, prefixedBuffer, sizeof(int), bytesToSend.Length); // add the prefix to the message
-
+                    Console.WriteLine(prefixedBuffer.ToString());
                     // Actually send it
 
                     ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
@@ -2089,8 +2116,10 @@ namespace YouChatServer
                 foreach (ChatParticipant chatParticipant in chatParticipants)
                 {
                     chatParticipantName = chatParticipant.Username;
-                    //chatParticipantNames.Add(chatParticipant.Username);
-                    Unicast(jsonMessage, chatParticipantName);
+                    if ((chatParticipantName != _ClientNick) && UserIsOnline(chatParticipantName))
+                    {
+                        Unicast(jsonMessage, chatParticipantName);
+                    }
                 }
             }       
         }

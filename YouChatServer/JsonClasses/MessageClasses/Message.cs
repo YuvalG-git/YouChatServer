@@ -10,7 +10,7 @@ namespace YouChatServer.JsonClasses
     {
         private string _messageSenderName;
         private string _chatId;
-        private object _messageContent; //todo - to do it like that or to use inheritance
+        private object _messageContent; 
         private DateTime _messageDateAndTime;
 
         public Message(string messageSenderName, string chatId, object messageContent, DateTime messageDateAndTime)

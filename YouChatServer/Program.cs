@@ -89,7 +89,7 @@ namespace YouChatServer
 
                     if (!ClientsHistory.ContainsKey(clientIP))
                     {
-                        ClientsHistory.Add(clientIP, new ServerConnectAttemptCounter(4, TimeSpan.FromMinutes(30)));
+                        ClientsHistory.Add(clientIP, new ServerConnectAttemptCounter(5, TimeSpan.FromMinutes(10)));
                     }
                     else if (!ClientsHistory[clientIP].NewAttempt())
                     {

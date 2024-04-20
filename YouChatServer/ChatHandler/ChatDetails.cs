@@ -12,15 +12,18 @@ namespace YouChatServer.ChatHandler
         private string _messageHistory;
         private DateTime? _lastMessageTime;
         private string _lastMessageContent;
+        private string _lastMessageSenderName;
+
         private List<ChatParticipant> _chatParticipants;
 
-        public ChatDetails(string chatTagLineId, string messageHistory, DateTime? lastMessageTime, string lastMessageContent, List<ChatParticipant> chatParticipants)
+        public ChatDetails(string chatTagLineId, string messageHistory, DateTime? lastMessageTime, string lastMessageContent, string lastMessageSenderName, List<ChatParticipant> chatParticipants)
         {
             _chatTagLineId = chatTagLineId;
             _messageHistory = messageHistory;
             _lastMessageTime = lastMessageTime;
             _lastMessageContent = lastMessageContent;
             _chatParticipants = chatParticipants;
+            _lastMessageSenderName = lastMessageSenderName;
         }
 
         public string ChatTagLineId
@@ -65,6 +68,17 @@ namespace YouChatServer.ChatHandler
             set
             {
                 _lastMessageContent = value;
+            }
+        }
+        public string LastMessageSenderName
+        {
+            get
+            {
+                return _lastMessageSenderName;
+            }
+            set
+            {
+                _lastMessageSenderName = value;
             }
         }
         public List<ChatParticipant> ChatParticipants
