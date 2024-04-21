@@ -13,4 +13,157 @@
     <Content>hi</Content>
     <Date>2024-04-20 10:49:19</Date>
   </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 18:00:26</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>{"MessageType":128,"MessageBody":{"$type":"YouChatApp.JsonClasses.Message, YouChatApp","MessageContent":"hi","MessageDateAndTime":"2024-04-21T18:00:26.7740914+03:00","ChatId":"64D8TL","MessageSenderName":"yuval"}}</Content>
+    <Date>2024-04-21 18:00:29</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>{"MessageType":128,"MessageBody":{"$type":"YouChatApp.JsonClasses.Message, YouChatApp","MessageContent":"{\"MessageType\":128,\"MessageBody\":{\"$type\":\"YouChatApp.JsonClasses.Message, YouChatApp\",\"MessageContent\":\"hi\",\"MessageDateAndTime\":\"2024-04-21T18:00:26.7740914+03:00\",\"ChatId\":\"64D8TL\",\"MessageSenderName\":\"yuval\"}}","MessageDateAndTime":"2024-04-21T18:00:29.7088573+03:00","ChatId":"64D8TL","MessageSenderName":"yuval"}}</Content>
+    <Date>2024-04-21 18:00:48</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>{"MessageType":128,"MessageBody":{"$type":"YouChatApp.JsonClasses.Message, YouChatApp","MessageContent":"{\"MessageType\":128,\"MessageBody\":{\"$type\":\"YouChatApp.JsonClasses.Message, YouChatApp\",\"MessageContent\":\"{\\\"MessageType\\\":128,\\\"MessageBody\\\":{\\\"$type\\\":\\\"YouChatApp.JsonClasses.Message, YouChatApp\\\",\\\"MessageContent\\\":\\\"hi\\\",\\\"MessageDateAndTime\\\":\\\"2024-04-21T18:00:26.7740914+03:00\\\",\\\"ChatId\\\":\\\"64D8TL\\\",\\\"MessageSenderName\\\":\\\"yuval\\\"}}\",\"MessageDateAndTime\":\"2024-04-21T18:00:29.7088573+03:00\",\"ChatId\":\"64D8TL\",\"MessageSenderName\":\"yuval\"}}","MessageDateAndTime":"2024-04-21T18:00:48.0011614+03:00","ChatId":"64D8TL","MessageSenderName":"yuval"}}</Content>
+    <Date>2024-04-21 18:01:01</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 18:03:33</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 18:05:14</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 18:06:19</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:08:08</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:12:15</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:12:46</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:15:57</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:18:21</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:19:37</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:20:25</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:20:51</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 18:20:53</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:30:04</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:32:05</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:32:18</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:58:38</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:59:24</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 21:26:28</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 21:28:29</Date>
+  </Message>
 </Chat>

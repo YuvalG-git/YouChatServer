@@ -21,10 +21,345 @@
   </Message>
   <Message>
     <Sender>yuval</Sender>
-    <Type>Text</Type>
-    <Content>Contact Information:
-sivan#HWYZ6H
-tamar#RT16KK</Content>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
     <Date>2024-04-21 09:44:49</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 16:17:43</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 16:29:56</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 18:38:49</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:00:54</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:03:17</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:10:48</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>sdffdsdsf</Content>
+    <Date>2024-04-21 20:10:50</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:11:41</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>dfsfdsss</Content>
+    <Date>2024-04-21 20:12:27</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:12:36</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>sdffsd</Content>
+    <Date>2024-04-21 20:12:38</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>sdfdsfsd</Content>
+    <Date>2024-04-21 20:14:59</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:15:03</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>sdfdsf</Content>
+    <Date>2024-04-21 20:15:04</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>afssdff</Content>
+    <Date>2024-04-21 20:15:52</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:16:03</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>sdfsdf</Content>
+    <Date>2024-04-21 20:16:10</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>fsdfds</Content>
+    <Date>2024-04-21 20:17:48</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:18:14</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:18:17</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>dsfdsdfsds
+</Content>
+    <Date>2024-04-21 20:19:59</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>df</Content>
+    <Date>2024-04-21 20:20:01</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>df</Content>
+    <Date>2024-04-21 20:20:03</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>dfgdfgdfgd</Content>
+    <Date>2024-04-21 20:20:04</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:20:08</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>dfsf</Content>
+    <Date>2024-04-21 20:20:10</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>sdffds</Content>
+    <Date>2024-04-21 20:20:12</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:20:13</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:24:01</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:24:05</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:24:42</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>vsfd</Content>
+    <Date>2024-04-21 20:24:44</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:25:25</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>ff</Content>
+    <Date>2024-04-21 20:25:28</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 20:29:37</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:29:40</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>dfsdfs</Content>
+    <Date>2024-04-21 20:29:42</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:30:23</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>dassddf</Content>
+    <Date>2024-04-21 20:30:35</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:30:38</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:30:52</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:31:06</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>sddfs</Content>
+    <Date>2024-04-21 20:31:07</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:41:21</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:41:34</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:43:19</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:43:41</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>sdsdfsdfsdf</Content>
+    <Date>2024-04-21 20:45:43</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:51:11</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:54:31</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 21:31:40</Date>
   </Message>
 </Chat>

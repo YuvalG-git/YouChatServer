@@ -1172,72 +1172,7 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        //public static Dictionary<string, string> GetFriendsProfileInformation(string Friends)
-        //{
-        //    try
-        //    {
-        //        string[] FriendName = Friends.Split('#');
-
-        //        Dictionary<string,string> FriendsProfileDetails = new Dictionary<string, string>();
-        //        cmd.Connection = connection;
-        //        connection.Open();
-        //        SqlDataReader Reader;
-        //        string ProfileInformation;
-
-        //        string ProfilePicture;
-        //        string ProfileStatus;
-        //        DateTime LastSeenTime;
-        //        bool LastSeenProperty;
-        //        bool OnlineProperty;
-        //        bool ProfilePictureProperty;
-        //        bool StatusProperty;
-
-        //        foreach (string usernameToSearch in FriendName)
-        //        {
-        //            ProfileInformation = "";
-        //            ProfilePicture = "";
-        //            ProfileStatus = "";
-        //            LastSeenTime = new DateTime();
-        //            LastSeenProperty = true;
-        //            OnlineProperty = true;
-        //            ProfilePictureProperty = true;
-        //            StatusProperty = true;
-        //            string Sql = "SELECT ProfilePicture, Status, LastSeenTime, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty FROM UserDetails WHERE Username = '" + usernameToSearch + "'";
-        //            cmd.CommandText = Sql;
-        //            Reader = cmd.ExecuteReader();
-        //            while (Reader.Read())
-        //            {
-        //                ProfilePicture = Reader.GetString(0); //needs to change the profilepicture in database from image to string...
-        //                ProfileStatus = Reader.GetString(1);
-        //                LastSeenProperty = Reader.GetBoolean(2);
-        //                LastSeenTime = Reader.GetDateTime(3);
-
-        //                OnlineProperty = Reader.GetBoolean(4);
-        //                ProfilePictureProperty = Reader.GetBoolean(5);
-        //                StatusProperty = Reader.GetBoolean(6);
-
-
-        //                //FriendsProfileInformation.Append(Reader[i].ToString());
-        //                //FriendsProfileInformation.Append("#");
-        //                // Add the details to the list
-        //            }
-        //              Reader.Close();
-        //              connection.Close();
-        //            ProfileInformation = usernameToSearch + "#" + ProfilePicture + "#" + ProfileStatus + "#" + LastSeenTime.ToString("yyyy-MM-dd") + "#" + LastSeenProperty + "#" + OnlineProperty + "#" + ProfilePictureProperty + "#" + StatusProperty;
-        //            // Add the list of details to the dictionary
-        //            FriendsProfileDetails[usernameToSearch] = ProfileInformation;
-        //        }
-
-        //        return FriendsProfileDetails;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show(ex.ToString());
-        //        Console.WriteLine(ex.Message);
-        //        return null;
-        //    }
-
-        //}
+     
         public static void PrintTable(string tableName)
         {
             connection.Open();
@@ -1608,6 +1543,50 @@ namespace YouChatServer.UserDetails
             }
             finally
             {
+                if (connection.State != ConnectionState.Closed)
+                {
+                    connection.Close();
+                }
+            }
+        }
+        public static bool AreLastMessageDataIdentical(string TableName, string ChatId, string LastMessageContent, string LastMessageSenderName, string LastMessageTimeAsString)
+        {
+            SqlDataReader Reader = null;
+            try
+            {
+                cmd.Connection = connection;
+                string sql = $"SELECT LastMessageContent, LastMessageSenderName, LastMessageTime FROM {TableName} WHERE ChatTagLineId = @ChatTagLineId";
+                cmd.CommandText = sql;
+                cmd.Parameters.Clear(); // Clear previous parameters
+                cmd.Parameters.AddWithValue("@ChatTagLineId", ChatId);
+
+                connection.Open();
+                Reader = cmd.ExecuteReader();
+                if (Reader.Read())
+                {
+                    string existingLastMessageContent = Reader["LastMessageContent"].ToString();
+                    string existingLastMessageSenderName = Reader["LastMessageSenderName"].ToString();
+                    string existingLastMessageTimeAsString = Reader["LastMessageTime"].ToString();
+                    DateTime existingLastMessageTime = DateTime.Parse(existingLastMessageTimeAsString);
+                    DateTime newLastMessageTime = DateTime.Parse(LastMessageTimeAsString);
+                    return existingLastMessageContent == LastMessageContent &&
+                           existingLastMessageSenderName == LastMessageSenderName &&
+                           existingLastMessageTime == newLastMessageTime;
+                }
+                return false; // No existing record found for the given ChatId
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+            finally
+            {
+                if (Reader != null && !Reader.IsClosed)
+                {
+                    Reader.Close();
+                }
                 if (connection.State != ConnectionState.Closed)
                 {
                     connection.Close();

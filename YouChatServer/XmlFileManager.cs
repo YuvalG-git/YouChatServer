@@ -99,41 +99,15 @@ namespace YouChatServer
             }
         }
 
-        public void EditMessage(string sender, string originalContent, string newContent, DateTime date)
+
+        public void EditMessage(string sender, string type, string content, DateTime date)
         {
             // Load the existing XML file
             XmlDocument doc = new XmlDocument();
             doc.Load(_filename);
 
             // Find the message element to edit
-            XmlNodeList messageNodes = doc.SelectNodes("//Message");
-            foreach (XmlNode messageNode in messageNodes)
-            {
-                XmlNode senderNode = messageNode.SelectSingleNode("Sender");
-                XmlNode contentNode = messageNode.SelectSingleNode("Content");
-                XmlNode dateNode = messageNode.SelectSingleNode("Date");
-
-
-                if (senderNode != null && contentNode != null &&
-                    senderNode.InnerText == sender && contentNode.InnerText == originalContent && dateNode.InnerText == date.ToString("yyyy-MM-dd HH:mm:ss"))
-                {
-                    // Update the content of the message
-                    contentNode.InnerText = newContent;
-                    break; // Exit loop since we found and edited the message
-                }
-            }
-
-            // Save the modified XML document back to the file
-            doc.Save(_filename);
-        }
-        public void EditMessage2(string sender, string originalContent, string newContent, DateTime date)
-        {
-            // Load the existing XML file
-            XmlDocument doc = new XmlDocument();
-            doc.Load(_filename);
-
-            // Find the message element to edit
-            XmlNodeList messageNodes = doc.SelectNodes("//Message[Sender='" + sender + "' and Content='" + originalContent + "' and Date='" + date.ToString("yyyy-MM-dd HH:mm:ss") + "']");
+            XmlNodeList messageNodes = doc.SelectNodes("//Message[Sender='" + sender + "' and Type='" + type + "' and Content='" + content + "' and Date='" + date.ToString("yyyy-MM-dd HH:mm:ss") + "']");
 
             if (messageNodes.Count == 0)
             {
@@ -147,17 +121,34 @@ namespace YouChatServer
             }
             else
             {
-                // Update the content of the message
-                XmlNode contentNode = messageNodes[0].SelectSingleNode("Content");
-                if (contentNode != null)
+                XmlNode messageNode = messageNodes[0];
+
+                // Check if all values are the same
+                if (messageNode.SelectSingleNode("Sender").InnerText == sender &&
+                    messageNode.SelectSingleNode("Type").InnerText == type &&
+                    messageNode.SelectSingleNode("Content").InnerText == content &&
+                    messageNode.SelectSingleNode("Date").InnerText == date.ToString("yyyy-MM-dd HH:mm:ss"))
                 {
-                    contentNode.InnerText = newContent;
+                    // Update the content of the message
+                    XmlNode contentNode = messageNode.SelectSingleNode("Content");
+                    if (contentNode != null)
+                    {
+                        contentNode.InnerText = "";
+                    }
+
+                    // Update the type of the message if the content matches
+                    XmlNode typeNode = messageNode.SelectSingleNode("Type");
+                    if (typeNode != null)
+                    {
+                        typeNode.InnerText = "DeletedMessage";
+                    }
 
                     // Save the modified XML document back to the file
                     doc.Save(_filename);
                 }
             }
         }
+       
 
         /// <summary>
         /// The method adds a new message to a XML File

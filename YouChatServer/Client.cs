@@ -21,6 +21,8 @@ using YouChatServer.JsonClasses.MessageClasses;
 using Newtonsoft.Json.Bson;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using System.Net.Mail;
+using System.Security.Cryptography;
+using System.Windows.Forms;
 
 namespace YouChatServer
 {
@@ -53,8 +55,6 @@ namespace YouChatServer
         private ClientCaptchaRotationImagesAttemptsState _captchaRotationImagesAttemptsState;
         public static List<Client> clientsList = new List<Client>();
 
-
-        public static Dictionary<IPEndPoint, string> clientKeys = new Dictionary<IPEndPoint, string>();
 
         /// <summary>
         /// Represents the maximum number of clients that were connected to the game
@@ -1049,6 +1049,64 @@ namespace YouChatServer
             });
             SendMessage(captchaCodeResponseJson);
         }
+        private void HandleDeleteMessageRequestEnum(JsonObject jsonObject)
+        {
+            JsonClasses.Message message = jsonObject.MessageBody as JsonClasses.Message;
+            string messageSenderName = message.MessageSenderName;
+            if (messageSenderName == _ClientNick)
+            {
+                string chatId = message.ChatId;
+
+                DateTime messageDateTime = message.MessageDateAndTime;
+                XmlFileManager xmlFileManager = ChatHandler.ChatHandler.ChatFileManagers[chatId];
+                object messageContent = message.MessageContent;
+
+                ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+                string lastMessageContentValue = "";
+                string messageType = "";
+                string messageContentAsString = "";
+                if (messageContent is string textMessageContent)
+                {
+                    messageType = "Text";
+                    messageContentAsString = textMessageContent;
+                    lastMessageContentValue = textMessageContent;
+                }
+                else if (messageContent is ImageContent imageMessageContent)
+                {
+                    messageType = "Image";
+                    byte[] imageMessageContentByteArray = imageMessageContent.ImageBytes;
+                    string imageMessageContentString = Convert.ToBase64String(imageMessageContentByteArray);
+
+                    messageContentAsString = imageMessageContentString;
+                    lastMessageContentValue = "Image";
+                }
+                if (messageDateTime.CompareTo(chat.LastMessageTime) == 0 && messageSenderName == chat.LastMessageSenderName)
+                {
+                    chat.LastMessageContent = "Deleted Message";
+                }
+                xmlFileManager.EditMessage(messageSenderName, messageType, messageContentAsString, messageDateTime);
+
+                string TableName = "";
+                if (chat is DirectChatDetails)
+                    TableName = "DirectChats";
+                else if (chat is GroupChatDetails)
+                    TableName = "GroupChats";
+                string messageDateTimeAsString = messageDateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+                if (DataHandler.AreLastMessageDataIdentical(TableName, chatId, lastMessageContentValue, messageSenderName, messageDateTimeAsString))
+                {
+                    if (DataHandler.UpdateLastMessageData(TableName, chatId, "Deleted Message", messageSenderName, messageDateTimeAsString) > 0)
+                    {
+
+                    }
+                }
+                JsonObject deleteMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.DeleteMessageResponse, message);
+                string deleteMessageJson = JsonConvert.SerializeObject(deleteMessageJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendChatMessage(deleteMessageJson, chatId);
+            }        
+        }
         private void HandleSendMessageRequestEnum(JsonObject jsonObject)
         {
             JsonClasses.Message message = jsonObject.MessageBody as JsonClasses.Message;
@@ -1088,7 +1146,6 @@ namespace YouChatServer
                     TableName = "DirectChats";
                 else if (chat is GroupChatDetails)
                     TableName = "GroupChats";
-                //string messageDateTimeAsString = messageDateTime.ToString("yyyy-MM-dd HH-mm-ss");
                 string messageDateTimeAsString = messageDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
                 if (DataHandler.UpdateLastMessageData(TableName, chatId, lastMessageContentValue, messageSenderName, messageDateTimeAsString) > 0)
                 {
@@ -1204,6 +1261,7 @@ namespace YouChatServer
                 SendMessage(passwordRenewalJson);
             }
         }
+
         private void HandleUdpAudioConnectionRequestEnum(JsonObject jsonObject)
         {
             string portAsString = jsonObject.MessageBody as string;
@@ -1222,22 +1280,26 @@ namespace YouChatServer
                 }
             }
             IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
-            
-            foreach (var entry in AudioUdpHandler.EndPoints.ToList())
+
+            var keys = AudioUdpHandler.EndPoints.Keys.ToList();
+            foreach (var key in keys)
             {
-                if (entry.Key.Equals(_clientIPEndPoint))
+                if (AudioUdpHandler.EndPoints[key] == _clientIPEndPoint)
                 {
-                    AudioUdpHandler.EndPoints.Remove(entry.Key);
-                    AudioUdpHandler.EndPoints[iPEndPoint] = entry.Value;
+                    AudioUdpHandler.EndPoints.Remove(key);
+                    AudioUdpHandler.EndPoints[key] = iPEndPoint;
                 }
-                else if (entry.Value.Equals(_clientIPEndPoint))
+                else if (key == _clientIPEndPoint)
                 {
-                    AudioUdpHandler.EndPoints[entry.Key] = iPEndPoint;
+                    IPEndPoint value = AudioUdpHandler.EndPoints[key];
+                    AudioUdpHandler.EndPoints.Remove(key);
+                    AudioUdpHandler.EndPoints[iPEndPoint] = value;
                 }
             }
+        
             string udpSymmetricKey = RandomStringCreator.RandomString(32);
             string EncryptedSymmerticKey = Rsa.Encrypt(udpSymmetricKey, ClientPublicKey);
-            clientKeys.Add(iPEndPoint, udpSymmetricKey);
+            AudioUdpHandler.clientKeys.Add(iPEndPoint, udpSymmetricKey);
             JsonObject udpAudioConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionResponse, EncryptedSymmerticKey);
             string udpAudioConnectionRequestJson = JsonConvert.SerializeObject(udpAudioConnectionRequestJsonObject, new JsonSerializerSettings
             {
@@ -1585,32 +1647,13 @@ namespace YouChatServer
         }
         private void HandleVideoCallAcceptanceRequestEnum(JsonObject jsonObject)
         {
-            string chatId = jsonObject.MessageBody as string;
-            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
-            try
-            {
-                DirectChatDetails directChat = (DirectChatDetails)chat;
-                string friendName = directChat.GetOtherUserName(_ClientNick);
-                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
-                {
-                    JsonObject videoCallDenialResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceResponse, chatId);
-                    string videoCallDenialResponseJson = JsonConvert.SerializeObject(videoCallDenialResponseJsonObject, new JsonSerializerSettings
-                    {
-                        TypeNameHandling = TypeNameHandling.Auto
-                    });
-                    SendMessage(videoCallDenialResponseJson);
-                    Unicast(videoCallDenialResponseJson, friendName);
-                    IPEndPoint friendEndPoint = GetUserEndPoint(friendName);
-                    AudioUdpHandler.EndPoints[_clientIPEndPoint] = friendEndPoint;
-                    AudioUdpHandler.EndPoints[friendEndPoint] = _clientIPEndPoint;
-                }
-            }
-            catch
-            {
-                RestartCallInvitation(chatId);
-            }
+            HandleCallAcceptanceRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever);
         }
-        private void HandleVideoCallDenialRequestEnum(JsonObject jsonObject)
+        private void HandleAudioCallAcceptanceRequestEnum(JsonObject jsonObject)
+        {
+            HandleCallAcceptanceRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.AudioCallAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulAudioCallResponse_Reciever);
+        }
+        private void HandleCallAcceptanceRequestEnum(JsonObject jsonObject, EnumHandler.CommunicationMessageID_Enum callAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum failedResponse)
         {
             string chatId = jsonObject.MessageBody as string;
             ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
@@ -1620,12 +1663,47 @@ namespace YouChatServer
                 string friendName = directChat.GetOtherUserName(_ClientNick);
                 if (isUserInCall(friendName) && isUserInCall(_ClientNick))
                 {
-                    JsonObject videoCallDenialResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.VideoCallDenialResponse, null);
-                    string videoCallDenialResponseJson = JsonConvert.SerializeObject(videoCallDenialResponseJsonObject, new JsonSerializerSettings
+                    JsonObject callAcceptanceResponseJsonObject = new JsonObject(callAcceptanceResponse, chatId);
+                    string callAcceptanceResponseJson = JsonConvert.SerializeObject(callAcceptanceResponseJsonObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.Auto
                     });
-                    Unicast(videoCallDenialResponseJson, friendName);
+                    SendMessage(callAcceptanceResponseJson);
+                    Unicast(callAcceptanceResponseJson, friendName);
+                    IPEndPoint friendEndPoint = GetUserEndPoint(friendName);
+                    AudioUdpHandler.EndPoints[_clientIPEndPoint] = friendEndPoint;
+                    AudioUdpHandler.EndPoints[friendEndPoint] = _clientIPEndPoint;
+                }
+            }
+            catch
+            {
+                RestartCallInvitation(chatId, failedResponse);
+            }
+        }
+        private void HandleVideoCallDenialRequestEnum(JsonObject jsonObject)
+        {
+            HandleCallDenialRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallDenialResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever);
+        }
+        private void HandleAudioCallDenialRequestEnum(JsonObject jsonObject)
+        {
+            HandleCallDenialRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.AudioCallDenialResponse,EnumHandler.CommunicationMessageID_Enum.SuccessfulAudioCallResponse_Reciever);
+        }
+        private void HandleCallDenialRequestEnum(JsonObject jsonObject, EnumHandler.CommunicationMessageID_Enum callDenialResponse, EnumHandler.CommunicationMessageID_Enum failedResponse)
+        {
+            string chatId = jsonObject.MessageBody as string;
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
+            {
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
+                {
+                    JsonObject callDenialResponseJsonObject = new JsonObject(callDenialResponse, null);
+                    string callDenialResponseJson = JsonConvert.SerializeObject(callDenialResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    Unicast(callDenialResponseJson, friendName);
 
                     _inCall = false;
                     SetUserInCall(friendName, false);
@@ -1633,7 +1711,7 @@ namespace YouChatServer
             }
             catch
             {
-                RestartCallInvitation(chatId);
+                RestartCallInvitation(chatId, failedResponse);
             }
         }
         private void HandleMessageHistoryRequestEnum(JsonObject jsonObject)
@@ -1674,7 +1752,7 @@ namespace YouChatServer
                         }
                         break;
                     case "DeletedMessage":
-                        messageContent = "";
+                        messageContent = null;
                         break;
                 }
                 messageSenderName = messageData.Sender;
@@ -1709,13 +1787,99 @@ namespace YouChatServer
         {
             HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Reciever);
             Console.WriteLine("close");
-            JsonObject endVideoCallResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Reciever, null);
+            JsonObject endVideoCallResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Sender, null);
             string endVideoCallResponseJson = JsonConvert.SerializeObject(endVideoCallResponseJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
             });
             SendMessage(endVideoCallResponseJson);
         }
+        private void HandleEndAudioCallRequestEnum(JsonObject jsonObject)
+        {
+            AudioCallOverDetails callOverDetails = jsonObject.MessageBody as AudioCallOverDetails;
+            string chatId = callOverDetails.ChatId;
+            int port = callOverDetails.SocketPort;
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
+            {
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
+                {
+                    JsonObject recieverAudioCallOverResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndAudioCallResponse_Reciever, null);
+                    string recieverAudioCallOverResponseJson = JsonConvert.SerializeObject(recieverAudioCallOverResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    Unicast(recieverAudioCallOverResponseJson, friendName);
+                    JsonObject senderAudioCallOverResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndAudioCallResponse_Sender, null);
+                    string senderAudioCallOverResponseJson = JsonConvert.SerializeObject(senderAudioCallOverResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(senderAudioCallOverResponseJson);
+                    _inCall = false;
+                    SetUserInCall(friendName, false);
+
+                    IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
+                    IPEndPoint friendIPEndPoint = null;
+                    List<IPEndPoint> keysToRemove = new List<IPEndPoint>();
+
+                    foreach (var keyValuePair in AudioUdpHandler.EndPoints)
+                    {
+                        if (keyValuePair.Key.Address.Equals(iPEndPoint.Address) && keyValuePair.Key.Port == iPEndPoint.Port)
+                        {
+                            friendIPEndPoint = keyValuePair.Value;
+                            keysToRemove.Add(keyValuePair.Key);
+                        }
+                        else if (keyValuePair.Value.Address.Equals(iPEndPoint.Address) && keyValuePair.Value.Port == iPEndPoint.Port)
+                        {
+                            friendIPEndPoint = keyValuePair.Key;
+                            keysToRemove.Add(keyValuePair.Key);
+                        }
+                    }
+
+                    foreach (var key in keysToRemove)
+                    {
+                        AudioUdpHandler.EndPoints.Remove(key);
+                        AudioUdpHandler.clientKeys.Remove(key);
+                    }
+
+                    if (friendIPEndPoint != null) //to make sure it gets deleted...
+                    {
+                        AudioUdpHandler.clientKeys.Remove(friendIPEndPoint);
+                    }
+
+                    //IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
+                    //IPEndPoint friendIPEndPoint = null;
+
+                    //var keys = AudioUdpHandler.EndPoints.Keys.ToList();
+
+                    //foreach (var key in keys)
+                    //{
+                    //    if (key == iPEndPoint)
+                    //    {
+                    //        friendIPEndPoint = AudioUdpHandler.EndPoints[key];
+                    //        AudioUdpHandler.EndPoints.Remove(key);
+                    //    }
+                    //    else if (AudioUdpHandler.EndPoints[key] == iPEndPoint)
+                    //    {
+                    //        friendIPEndPoint = key;
+                    //        AudioUdpHandler.EndPoints.Remove(key);
+                    //    }
+                    //}
+                    //AudioUdpHandler.clientKeys.Remove(iPEndPoint);
+                    //AudioUdpHandler.clientKeys.Remove(friendIPEndPoint);
+
+
+                }
+            }
+            catch
+            {
+            }
+
+        }
+      
         private void HandleVideoCallRequest(JsonObject jsonObject, EnumHandler.CommunicationMessageID_Enum videoCallRequest)
         {
             string chatId = jsonObject.MessageBody as string;
@@ -1732,23 +1896,20 @@ namespace YouChatServer
                         TypeNameHandling = TypeNameHandling.Auto
                     });
                     Unicast(videoCallMuteResponseJson, friendName);
-
-                    _inCall = false;
-                    SetUserInCall(friendName, false);
                 }
             }
             catch
             {
             }
         }
-        private void RestartCallInvitation(string chatId)
+        private void RestartCallInvitation(string chatId, EnumHandler.CommunicationMessageID_Enum restartCallInvitation)
         {
-            JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever, chatId);
-            string SenderSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
+            JsonObject senderSuccessfulCallResponsJsonObject = new JsonObject(restartCallInvitation, chatId);
+            string senderSuccessfulCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulCallResponsJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
             });
-            SendMessage(SenderSuccessfulVideoCallResponsJson);
+            SendMessage(senderSuccessfulCallResponsJson);
         }
 
 
@@ -1875,9 +2036,6 @@ namespace YouChatServer
                             case EnumHandler.CommunicationMessageID_Enum.Disconnect:
                                 HandleDisconnectEnum();
                                 break;
-                            case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
-                                HandleUdpAudioConnectionRequestEnum(jsonObject);
-                                break;
                             case EnumHandler.CommunicationMessageID_Enum.PersonalVerificationAnswersRequest:
                                 HandlePersonalVerificationAnswersRequestEnum(jsonObject);
                                 break;
@@ -1960,6 +2118,21 @@ namespace YouChatServer
                                 break;
                             case EnumHandler.CommunicationMessageID_Enum.AudioCallRequest:
                                 HandleAudioCallRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.AudioCallAcceptanceRequest:
+                                HandleAudioCallAcceptanceRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.AudioCallDenialRequest:
+                                HandleAudioCallDenialRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
+                                HandleUdpAudioConnectionRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.EndAudioCallRequest:
+                                HandleEndAudioCallRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.DeleteMessageRequest:
+                                HandleDeleteMessageRequestEnum(jsonObject);
                                 break;
 
                         }

@@ -94,6 +94,7 @@
     <Compile Include="Encryption\RSAServiceProvider.cs" />
     <Compile Include="EnumHandler\EnumConverter.cs" />
     <Compile Include="EnumHandler\EnumHandler.cs" />
+    <Compile Include="JsonClasses\AudioCallOverDetails.cs" />
     <Compile Include="JsonClasses\CaptchaRotationBanDetails.cs" />
     <Compile Include="JsonClasses\CaptchaRotationImageDetails.cs" />
     <Compile Include="JsonClasses\CaptchaRotationImages.cs" />

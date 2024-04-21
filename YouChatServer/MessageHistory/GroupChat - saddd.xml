@@ -1,4 +1,65 @@
 <Chat>
   <ChatName>8FKOQ2</ChatName>
   <Participants>yuval, benben, einat, sivan, nadav, tamar</Participants>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-04-21 18:50:22</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 19:31:56</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:00:36</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:31:22</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>dsfdsf</Content>
+    <Date>2024-04-21 20:31:24</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:40:46</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:45:58</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 20:50:58</Date>
+  </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>DeletedMessage</Type>
+    <Content>
+    </Content>
+    <Date>2024-04-21 21:29:10</Date>
+  </Message>
 </Chat>
