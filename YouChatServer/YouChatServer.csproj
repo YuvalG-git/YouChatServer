@@ -71,6 +71,7 @@
     <Compile Include="ChatHandler\ChatDetails.cs" />
     <Compile Include="ChatHandler\ChatCreator.cs" />
     <Compile Include="ChatHandler\ChatHandler.cs" />
+    <Compile Include="ChatHandler\ChatInformation.cs" />
     <Compile Include="ChatHandler\ChatParticipant.cs" />
     <Compile Include="ChatHandler\Chats.cs" />
     <Compile Include="ChatHandler\DirectChatDetails.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="JsonClasses\PersonalVerificationQuestions.cs" />
     <Compile Include="JsonClasses\SmtpDetails.cs" />
     <Compile Include="JsonClasses\PersonalVerificationQuestionDetails.cs" />
+    <Compile Include="JsonClasses\SmtpVerification.cs" />
     <Compile Include="JsonClasses\UserDetails.cs" />
     <Compile Include="NamespaceAdjustmentBinder.cs" />
     <Compile Include="JsonClasses\JsonObject.cs" />

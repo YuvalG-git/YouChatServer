@@ -147,7 +147,13 @@ namespace YouChatServer
             MessageHistoryRequest,
             MessageHistoryResponse,
             OnlineUpdate,
-            OfflineUpdate
+            OfflineUpdate,
+            AudioCallRequest,
+            SuccessfulAudioCallResponse_Sender,
+            SuccessfulAudioCallResponse_Reciever,
+            FailedAudioCallResponse,
+            AudioCallAcceptanceResponse,
+            AudioCallDenialResponse,
         }
     }
 }

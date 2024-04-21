@@ -14,17 +14,20 @@ namespace YouChatServer.ChatHandler
 
         public static void SetChats()
         {
-            List<ChatDetails> chats = DataHandler.GetAllChats();
+            List<ChatInformation> chatInformationList = DataHandler.GetAllChats();
+            ChatDetails chatDetails;
             string chatId;
             string chatFilePath;
             XmlFileManager xmlFileManager;
-            foreach (ChatDetails chat in chats)
+            foreach(ChatInformation chatInformation in chatInformationList)
             {
-                chatId = chat.ChatTagLineId;
-                AllChats.Add(chatId, chat);
-                chatFilePath = chat.MessageHistory;
+                chatDetails = chatInformation.ChatDetails;
+                chatFilePath = chatInformation.MessageHistoryPath;
+                chatId = chatDetails.ChatTagLineId;
+                AllChats.Add(chatId, chatDetails);
                 xmlFileManager = new XmlFileManager(chatFilePath);
                 ChatFileManagers.Add(chatId, xmlFileManager);
+
             }
         }
         public static List<ChatDetails> GetUserChats(string username)

@@ -8,7 +8,7 @@ namespace YouChatServer.ChatHandler
 {
     public class DirectChatDetails : ChatDetails
     {
-        public DirectChatDetails(string chatTagLineId, string messageHistory, DateTime? lastMessageTime, string lastMessageContent, string lastMessageSenderName, List<ChatParticipant> chatParticipants) : base(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, lastMessageSenderName, chatParticipants)
+        public DirectChatDetails(string chatTagLineId, DateTime? lastMessageTime, string lastMessageContent, string lastMessageSenderName, List<ChatParticipant> chatParticipants) : base(chatTagLineId, lastMessageTime, lastMessageContent, lastMessageSenderName, chatParticipants)
         {
         }
         public string GetOtherUserName(string username)

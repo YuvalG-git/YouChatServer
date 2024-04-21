@@ -18,6 +18,9 @@ using YouChatServer.ClientAttemptsStateHandler;
 using YouChatServer.ContactHandler;
 using YouChatServer.UdpHandler;
 using YouChatServer.JsonClasses.MessageClasses;
+using Newtonsoft.Json.Bson;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
+using System.Net.Mail;
 
 namespace YouChatServer
 {
@@ -408,6 +411,46 @@ namespace YouChatServer
                 FailedAttempt();
             }
         }
+        private void HandleFailedAttempt(ClientAttemptsState clientAttemptsState, EnumHandler.CommunicationMessageID_Enum BanStart, string username, Action<string> FailedAttempt)
+        {
+            clientAttemptsState.HandleFailedAttempt();
+            if (clientAttemptsState.IsUserBanned())
+            {
+                clientAttemptsState.HandleBan();
+                Logger.LogUserLogOut("A user has been blocked from the server.");
+                double banDuration = clientAttemptsState.CurrentBanDuration;
+                JsonObject banMessageJsonObject = new JsonObject(BanStart, banDuration);
+                string banMessageJson = JsonConvert.SerializeObject(banMessageJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(banMessageJson);
+            }
+            else
+            {
+                FailedAttempt(username);
+            }
+        }
+        private void HandleFailedAttempt(ClientAttemptsState clientAttemptsState, EnumHandler.CommunicationMessageID_Enum BanStart, string username, string emailAddress, Action<string,string> FailedAttempt)
+        {
+            clientAttemptsState.HandleFailedAttempt();
+            if (clientAttemptsState.IsUserBanned())
+            {
+                clientAttemptsState.HandleBan();
+                Logger.LogUserLogOut("A user has been blocked from the server.");
+                double banDuration = clientAttemptsState.CurrentBanDuration;
+                JsonObject banMessageJsonObject = new JsonObject(BanStart, banDuration);
+                string banMessageJson = JsonConvert.SerializeObject(banMessageJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(banMessageJson);
+            }
+            else
+            {
+                FailedAttempt(username, emailAddress);
+            }
+        }
         private void HandleFailedAttempt(ClientAttemptsState clientAttemptsState, EnumHandler.CommunicationMessageID_Enum BanStartEnum, EnumHandler.CommunicationMessageID_Enum FailedAttemptEnum, Action<EnumHandler.CommunicationMessageID_Enum> FailedAttempt)
         {
             clientAttemptsState.HandleFailedAttempt();
@@ -448,7 +491,20 @@ namespace YouChatServer
         //}
         private void HandleloginRequest_SmtpLoginMessage(JsonObject jsonObject)
         {
-            string username = jsonObject.MessageBody as string;
+            SmtpVerification smtpVerification = jsonObject.MessageBody as SmtpVerification;
+            string username = smtpVerification.Username;
+            bool afterFail = smtpVerification.AfterFail;
+            if (afterFail)
+            {
+                HandleSmtpLoginMessage(username);
+            }
+            else
+            {
+                HandleFailedAttempt(_LoginFailedAttempts, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, username, HandleSmtpLoginMessage);
+            }
+        }
+        private void HandleSmtpLoginMessage(string username)
+        {
             string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
             smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
             JsonObject smtpLoginMessageJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage, null);
@@ -525,7 +581,8 @@ namespace YouChatServer
         private void HandleResetPasswordRequestEnum(JsonObject jsonObject)
         {
             SmtpDetails smtpDetails = jsonObject.MessageBody as SmtpDetails;
-            string username = smtpDetails.Username;
+            SmtpVerification smtpVerification = smtpDetails.SmtpVerification;
+            string username = smtpVerification.Username;
             string emailAddress = smtpDetails.EmailAddress;
             if (DataHandler.IsMatchingUsernameAndEmailAddressExist(username, emailAddress))
             {
@@ -641,20 +698,22 @@ namespace YouChatServer
                     {
                         DataHandler.AddColumnToFriends();
                     }
-                    string xmlFileName = "DirectChat - " + FriendRequestSenderUsername + " AND " + FriendRequestReceiverUsername;
+
                     List<string> chatParticipantNames = new List<string>
                     {
                         FriendRequestSenderUsername,
                         FriendRequestReceiverUsername
                     };
                     string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats");
+                    string xmlFileName = $"DirectChat - {ChatTagLine} - {FriendRequestSenderUsername} AND {FriendRequestReceiverUsername}";
                     XmlFileManager xmlFileManager = new XmlFileManager(xmlFileName, chatParticipantNames, ChatTagLine); //maybe i should create it before i do handledirectchatcreation and if it dont work to delete it...
                     string filePath = xmlFileManager.GetFilePath();
                     if (DataHandler.HandleDirectChatCreation(ChatTagLine, FriendRequestSenderUsername, FriendRequestReceiverUsername, filePath))
                     {
                         List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
-                        ChatHandler.ChatDetails chat = new DirectChatDetails(ChatTagLine, filePath, null, "", "", chatParticipants);
+                        ChatHandler.ChatDetails chat = new DirectChatDetails(ChatTagLine, null, "", "", chatParticipants);
                         ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
+                        ChatHandler.ChatHandler.ChatFileManagers.Add(ChatTagLine, xmlFileManager);
 
                         DirectChatDetails directChat = (DirectChatDetails)chat;
 
@@ -700,10 +759,39 @@ namespace YouChatServer
         private void HandleRegistrationRequest_SmtpRegistrationMessageEnum(JsonObject jsonObject) 
         {
             SmtpDetails userUsernameAndEmailAddress = jsonObject.MessageBody as SmtpDetails;
-            string username = userUsernameAndEmailAddress.Username;
+            SmtpVerification smtpVerification = userUsernameAndEmailAddress.SmtpVerification;
+            string username = smtpVerification.Username;
+            bool afterFail = smtpVerification.AfterFail;
             string emailAddress = userUsernameAndEmailAddress.EmailAddress;
-            smtpHandler.SendCodeToUserEmail(username,emailAddress,EnumHandler.SmtpMessageType_Enum.RegistrationMessage);
+            if (afterFail)
+            {
+                SmtpRegistrationMessage(username,emailAddress);
+            }
+            else
+            {
+                if (_RegistrationSmtpFailedAttempts == null)
+                {
+                    _RegistrationSmtpFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Registration);
+                }
+                HandleFailedAttempt(_RegistrationSmtpFailedAttempts, EnumHandler.CommunicationMessageID_Enum.RegistrationBanStart, username, emailAddress, SmtpRegistrationMessage);
+
+            }
+        }
+
+        private void SmtpRegistrationMessage(string username, string emailAddress)
+        {
+            smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.RegistrationMessage);
             JsonObject SentEmailNotificationJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.RegistrationResponse_SmtpRegistrationMessage, null);
+            string SentEmailNotificationJson = JsonConvert.SerializeObject(SentEmailNotificationJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(SentEmailNotificationJson);
+        }
+        private void HandleSmtpResetPasswordMessage(string username, string emailAddress)
+        {
+            smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.PasswordRenewalMessage);
+            JsonObject SentEmailNotificationJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ResetPasswordResponse_SmtpMessage, null);
             string SentEmailNotificationJson = JsonConvert.SerializeObject(SentEmailNotificationJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
@@ -712,16 +800,20 @@ namespace YouChatServer
         }
         private void HandleResetPasswordRequest_SmtpMessageEnum(JsonObject jsonObject)
         {
-            SmtpDetails userUsernameAndEmailAddress = jsonObject.MessageBody as SmtpDetails;
-            string username = userUsernameAndEmailAddress.Username;
-            string emailAddress = userUsernameAndEmailAddress.EmailAddress;
-            smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.PasswordRenewalMessage);
-            JsonObject SentEmailNotificationJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.ResetPasswordResponse_SmtpMessage, null);
-            string SentEmailNotificationJson = JsonConvert.SerializeObject(SentEmailNotificationJsonObject, new JsonSerializerSettings
+            SmtpDetails smtpDetails = jsonObject.MessageBody as SmtpDetails;
+            SmtpVerification smtpVerification = smtpDetails.SmtpVerification;
+            string username = smtpVerification.Username;
+            bool afterFail = smtpVerification.AfterFail;
+            string emailAddress = smtpDetails.EmailAddress;
+
+            if (afterFail)
             {
-                TypeNameHandling = TypeNameHandling.Auto
-            });
-            SendMessage(SentEmailNotificationJson);
+                HandleSmtpResetPasswordMessage(username,emailAddress);
+            }
+            else
+            {
+                HandleFailedAttempt(_PasswordResetFailedAttempts, EnumHandler.CommunicationMessageID_Enum.ResetPasswordBanStart, username,emailAddress, HandleSmtpResetPasswordMessage);
+            }
         }
         private void HandleRegistrationRequest_RegistrationEnum(JsonObject jsonObject)
         {
@@ -853,6 +945,7 @@ namespace YouChatServer
         }
         private void HandleCAptchaBitMap()
         {
+
             Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
             byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
             ImageContent captchaBitmapContent = new ImageContent(bytes);
@@ -865,6 +958,18 @@ namespace YouChatServer
         }
 
         private void HandleCaptchaImageRequestEnum(JsonObject jsonObject)
+        {
+            bool afterFail = (bool)jsonObject.MessageBody;
+            if (afterFail)
+            {
+                HandleCaptchaImage();
+            }
+            else
+            {
+                HandleFailedAttempt(_LoginFailedAttempts, EnumHandler.CommunicationMessageID_Enum.LoginBanStart, HandleCaptchaImage);
+            }
+        }
+        private void HandleCaptchaImage()
         {
             Image catpchaBitmap = captchaCodeHandler.CreateCatpchaBitmap();
             byte[] bytes = ConvertHandler.ConvertImageToBytes(catpchaBitmap);
@@ -1376,17 +1481,18 @@ namespace YouChatServer
         {
             ChatCreator newChat = jsonObject.MessageBody as ChatCreator;
             string chatName = newChat.ChatName;
-            string xmlFileName = "GroupChat - " + chatName;
             List<string> chatParticipantNames = newChat.ChatParticipants;
             byte[] chatProfilePictrue = newChat.ChatProfilePictureBytes;
             string ChatTagLine = DataHandler.SetTagLine("GroupChats", "DirectChats");
+            string xmlFileName = $"GroupChat - {ChatTagLine} - {chatName}";
             XmlFileManager xmlFileManager = new XmlFileManager(xmlFileName, chatParticipantNames, ChatTagLine); //maybe i should create it before i do handledirectchatcreation and if it dont work to delete it...
             string filePath = xmlFileManager.GetFilePath();
             if (DataHandler.CreateGroupChat(newChat, ChatTagLine, filePath) > 0)
             {
                 List<ChatParticipant> chatParticipants = DataHandler.GetChatParticipants(chatParticipantNames);
-                ChatHandler.ChatDetails chat = new GroupChatDetails(ChatTagLine, filePath, null, "", "", chatParticipants, chatName, chatProfilePictrue);
+                ChatHandler.ChatDetails chat = new GroupChatDetails(ChatTagLine, null, "", "", chatParticipants, chatName, chatProfilePictrue);
                 ChatHandler.ChatHandler.AllChats.Add(ChatTagLine, chat);
+                ChatHandler.ChatHandler.ChatFileManagers.Add(ChatTagLine, xmlFileManager);
                 //SendMessage(GroupCreatorResponse, "Group was successfully created");
                 GroupChatDetails groupChat = (GroupChatDetails)chat;
 
@@ -1399,10 +1505,44 @@ namespace YouChatServer
                 SendChatMessage(groupChatJson, ChatTagLine);
                 //ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
                 //needs to send this group creation to every logged user...
-            }      
+            }
+            else
+            {
+                xmlFileManager.DeleteFile();
+            }
         }
         private void HandleVideoCallRequestEnum(JsonObject jsonObject)
         {
+            List<EnumHandler.CommunicationMessageID_Enum> videoCallResponses = new List<EnumHandler.CommunicationMessageID_Enum>
+            {
+                EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Sender,
+                EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever,
+                EnumHandler.CommunicationMessageID_Enum.FailedVideoCallResponse
+            };
+
+            HandleCallRequest(jsonObject, videoCallResponses);
+        }
+        private void HandleAudioCallRequestEnum(JsonObject jsonObject)
+        {
+            List<EnumHandler.CommunicationMessageID_Enum> audioCallResponses = new List<EnumHandler.CommunicationMessageID_Enum>
+            {
+                EnumHandler.CommunicationMessageID_Enum.SuccessfulAudioCallResponse_Sender,
+                EnumHandler.CommunicationMessageID_Enum.SuccessfulAudioCallResponse_Reciever,
+                EnumHandler.CommunicationMessageID_Enum.FailedAudioCallResponse
+            };
+
+            HandleCallRequest(jsonObject, audioCallResponses);
+        }
+        private void HandleCallRequest(JsonObject jsonObject,List<EnumHandler.CommunicationMessageID_Enum> callResponses)
+        {
+            if (callResponses == null || callResponses.Count != 3)
+            {
+                return;
+            }
+            EnumHandler.CommunicationMessageID_Enum SuccessfulCallResponse_Sender = callResponses[0];
+            EnumHandler.CommunicationMessageID_Enum SuccessfulCallResponse_Reciever = callResponses[1];
+            EnumHandler.CommunicationMessageID_Enum FailedCallResponse = callResponses[2];
+
             string chatId = jsonObject.MessageBody as string;
             ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
             try
@@ -1411,14 +1551,14 @@ namespace YouChatServer
                 string friendName = directChat.GetOtherUserName(_ClientNick);
                 if (UserIsOnline(friendName) && !isUserInCall(friendName) && !isUserInCall(_ClientNick))
                 {
-                    JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Sender, null);
+                    JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(SuccessfulCallResponse_Sender, null);
                     string SenderSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.Auto
                     });
                     SendMessage(SenderSuccessfulVideoCallResponsJson);
 
-                    JsonObject recieverSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever, chatId);
+                    JsonObject recieverSuccessfulVideoCallResponsJsonObject = new JsonObject(SuccessfulCallResponse_Reciever, chatId);
                     string recieverSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(recieverSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.Auto
@@ -1430,7 +1570,7 @@ namespace YouChatServer
                 }
                 else
                 {
-                    JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FailedVideoCallResponse, null);
+                    JsonObject senderSuccessfulVideoCallResponsJsonObject = new JsonObject(FailedCallResponse, null);
                     string SenderSuccessfulVideoCallResponsJson = JsonConvert.SerializeObject(senderSuccessfulVideoCallResponsJsonObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.Auto
@@ -1817,6 +1957,9 @@ namespace YouChatServer
                                 break;
                             case EnumHandler.CommunicationMessageID_Enum.MessageHistoryRequest:
                                 HandleMessageHistoryRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.AudioCallRequest:
+                                HandleAudioCallRequestEnum(jsonObject);
                                 break;
 
                         }
@@ -2407,83 +2550,83 @@ namespace YouChatServer
             }       
         }
 
-        //public void SendMessage(string jsonMessage, bool needEncryption = true)
-        //{
-        //    try
-        //    {
-        //        System.Net.Sockets.NetworkStream ns;
-        //        // we use lock to present multiple threads from using the networkstream object
-        //        // this is likely to occur when the server is connected to multiple clients all of 
-        //        // them trying to access to the networkstram at the same time.
-        //        lock (_client.GetStream())
-        //        {
-        //            ns = _client.GetStream();
-        //        }
+        public void SendMessage2(string jsonMessage, bool needEncryption = true)
+        {
+            try
+            {
+                System.Net.Sockets.NetworkStream ns;
+                // we use lock to present multiple threads from using the networkstream object
+                // this is likely to occur when the server is connected to multiple clients all of 
+                // them trying to access to the networkstram at the same time.
+                lock (_client.GetStream())
+                {
+                    ns = _client.GetStream();
+                }
 
-        //        byte signal = needEncryption ? (byte)1 : (byte)0;
+                byte signal = needEncryption ? (byte)1 : (byte)0;
 
-        //        if (needEncryption)
-        //        {
-        //            jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
-        //        }
-        //        string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
-        //        Console.WriteLine(messageToSend);
+                if (needEncryption)
+                {
+                    jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
+                }
+                string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
+                Console.WriteLine(messageToSend);
 
-        //        // Send data to the client
-        //        byte[] totalBytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
-        //        byte[] bytesToSend;
+                // Send data to the client
+                byte[] totalBytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
+                byte[] bytesToSend;
 
-        //        while (totalBytesToSend.Length > 0)
-        //        {
-        //            if (totalBytesToSend.Length > System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)
-        //            {
-        //                bytesToSend = new byte[System.Convert.ToInt32(_client.ReceiveBufferSize) - 4];
-        //                Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4); // to get a fixed size of the prefix to the message
-        //                byte[] buffer = BitConverter.GetBytes(0); //indicates it's not the last message...
+                while (totalBytesToSend.Length > 0)
+                {
+                    if (totalBytesToSend.Length > System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)
+                    {
+                        bytesToSend = new byte[System.Convert.ToInt32(_client.ReceiveBufferSize) - 4];
+                        Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4); // to get a fixed size of the prefix to the message
+                        byte[] buffer = BitConverter.GetBytes(0); //indicates it's not the last message...
 
-        //                byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
-        //                byte[] prefixedBuffer = new byte[bytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
+                        byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
+                        byte[] prefixedBuffer = new byte[bytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
 
-        //                Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
-        //                Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
+                        Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
+                        Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
 
-        //                Array.Copy(bytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), bytesToSend.Length); // add the prefix to the message
+                        Array.Copy(bytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), bytesToSend.Length); // add the prefix to the message
 
-        //                // Actually send it
+                        // Actually send it
 
-        //                ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
-        //                ns.Flush();
-        //                byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)];
+                        ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+                        ns.Flush();
+                        byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)];
 
-        //                Array.Copy(totalBytesToSend, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
-        //                totalBytesToSend = newTotalBytesToSend;
-        //            }
-        //            else
-        //            {
-        //                byte[] buffer = BitConverter.GetBytes(1); //indicates it's the last message...
+                        Array.Copy(totalBytesToSend, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
+                        totalBytesToSend = newTotalBytesToSend;
+                    }
+                    else
+                    {
+                        byte[] buffer = BitConverter.GetBytes(1); //indicates it's the last message...
 
-        //                byte[] length = BitConverter.GetBytes(totalBytesToSend.Length); // the length of the message in byte array
-        //                byte[] prefixedBuffer = new byte[totalBytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
+                        byte[] length = BitConverter.GetBytes(totalBytesToSend.Length); // the length of the message in byte array
+                        byte[] prefixedBuffer = new byte[totalBytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
 
-        //                Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
-        //                Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
+                        Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
+                        Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
 
-        //                Array.Copy(totalBytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), totalBytesToSend.Length); // add the prefix to the message
+                        Array.Copy(totalBytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), totalBytesToSend.Length); // add the prefix to the message
 
-        //                // Actually send it
+                        // Actually send it
 
-        //                ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
-        //                ns.Flush();
-        //                totalBytesToSend = new byte[0];
-        //            }
-        //        }
+                        ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+                        ns.Flush();
+                        totalBytesToSend = new byte[0];
+                    }
+                }
 
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine(ex.ToString());
-        //    }
-        //}//end SendMessage
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }//end SendMessage
 
         public void SendMessage(int messageId, string messageContent)
         {
@@ -2556,22 +2699,23 @@ namespace YouChatServer
 
         public static int CalculateMonthsDifference(DateTime StartDate, DateTime EndDate)
         {
-            if (StartDate >= EndDate)
-            {
-                return 0;
-            }
-            int YearDifference = (EndDate.Year - StartDate.Year);
-            int MonthDifference = (EndDate.Month - StartDate.Month);
+            //if (StartDate >= EndDate)
+            //{
+            //    return 0;
+            //}
+            //int YearDifference = (EndDate.Year - StartDate.Year);
+            //int MonthDifference = (EndDate.Month - StartDate.Month);
 
-            int monthsApart = 12 * YearDifference + MonthDifference;
+            //int monthsApart = 12 * YearDifference + MonthDifference;
 
-            // Adjust for cases where the endDate's day is earlier than the startDate's day
-            if (EndDate.Day < StartDate.Day)
-            {
-                monthsApart--;
-            }
+            //// Adjust for cases where the endDate's day is earlier than the startDate's day
+            //if (EndDate.Day < StartDate.Day)
+            //{
+            //    monthsApart--;
+            //}
 
-            return monthsApart;
+            //return monthsApart;
+            return 3;
         }
     
 

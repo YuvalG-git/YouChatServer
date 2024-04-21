@@ -206,17 +206,17 @@ namespace YouChatServer.UserDetails
         //    }
 
         //}
-        public static List<ChatHandler.ChatDetails> GetAllChats()
+        public static List<ChatInformation> GetAllChats()
         {
-            List<ChatHandler.ChatDetails> allChats = new List<ChatHandler.ChatDetails>();
+            List<ChatInformation> allChats = new List<ChatInformation>();
             SqlTransaction transaction = null;
             try
             {
                 connection.Open();
                 transaction = connection.BeginTransaction();
 
-                List<ChatHandler.ChatDetails> directChats = GetChats("DirectChats", transaction);
-                List<ChatHandler.ChatDetails> groupChats = GetChats("GroupChats", transaction);
+                List<ChatInformation> directChats = GetChats("DirectChats", transaction);
+                List<ChatInformation> groupChats = GetChats("GroupChats", transaction);
                 // Add the first friend request
                 if (directChats == null)
                 {
@@ -251,17 +251,16 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        public static List<ChatDetails> GetChats(string tableName, SqlTransaction transaction)
+        public static List<ChatInformation> GetChats(string tableName, SqlTransaction transaction)
         {
             SqlDataReader Reader = null;
-            List<ChatDetails> chats = new List<ChatDetails>();
+            List<ChatInformation> chats = new List<ChatInformation>();
             try
             {
                 cmd.Connection = connection;
                 cmd.Transaction = transaction;
                 string sql = $"SELECT * FROM {tableName}";
                 cmd.CommandText = sql;
-                int id;
                 string chatTagLineId;
                 string messageHistory;
                 DateTime? lastMessageTime;
@@ -273,6 +272,7 @@ namespace YouChatServer.UserDetails
                 ChatParticipant chatParticipant;
                 string participant;
                 string participantProfilePictureId;
+                ChatInformation chatInformation;
                 Reader = cmd.ExecuteReader();
                 while (Reader.Read())
                 {
@@ -303,18 +303,19 @@ namespace YouChatServer.UserDetails
                     ChatDetails chat = null;
                     if (tableName == "DirectChats")
                     {
-                        chat = new DirectChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent, lastMessageSenderName, chatParticipants);
+                        chat = new DirectChatDetails(chatTagLineId, lastMessageTime, lastMessageContent, lastMessageSenderName, chatParticipants);
                     }
                     else if (tableName == "GroupChats")
                     {
                         chatName = Reader["ChatName"].ToString();
                         chatProfilePicture = (byte[])Reader["ChatProfilePicture"];
-                        chat = new GroupChatDetails(chatTagLineId, messageHistory, lastMessageTime, lastMessageContent,lastMessageSenderName, chatParticipants, chatName, chatProfilePicture);
+                        chat = new GroupChatDetails(chatTagLineId, lastMessageTime, lastMessageContent,lastMessageSenderName, chatParticipants, chatName, chatProfilePicture);
 
                     }
                     if (chat != null)
                     {
-                        chats.Add(chat);
+                        chatInformation = new ChatInformation(chat, messageHistory);
+                        chats.Add(chatInformation);
                     }
                 }
                 Reader.Close();

@@ -9,17 +9,15 @@ namespace YouChatServer.ChatHandler
     public class ChatDetails
     {
         private string _chatTagLineId;
-        private string _messageHistory;
         private DateTime? _lastMessageTime;
         private string _lastMessageContent;
         private string _lastMessageSenderName;
 
         private List<ChatParticipant> _chatParticipants;
 
-        public ChatDetails(string chatTagLineId, string messageHistory, DateTime? lastMessageTime, string lastMessageContent, string lastMessageSenderName, List<ChatParticipant> chatParticipants)
+        public ChatDetails(string chatTagLineId, DateTime? lastMessageTime, string lastMessageContent, string lastMessageSenderName, List<ChatParticipant> chatParticipants)
         {
             _chatTagLineId = chatTagLineId;
-            _messageHistory = messageHistory;
             _lastMessageTime = lastMessageTime;
             _lastMessageContent = lastMessageContent;
             _chatParticipants = chatParticipants;
@@ -35,17 +33,6 @@ namespace YouChatServer.ChatHandler
             set
             {
                 _chatTagLineId = value;
-            }
-        }
-        public string MessageHistory
-        {
-            get
-            {
-                return _messageHistory;
-            }
-            set
-            {
-                _messageHistory = value;
             }
         }
         public DateTime? LastMessageTime
