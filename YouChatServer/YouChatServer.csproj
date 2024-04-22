@@ -114,9 +114,12 @@
     <Compile Include="JsonClasses\PasswordUpdateDetails.cs" />
     <Compile Include="JsonClasses\PastFriendRequests.cs" />
     <Compile Include="JsonClasses\PersonalVerificationQuestions.cs" />
+    <Compile Include="JsonClasses\ProfilePictureUpdate.cs" />
     <Compile Include="JsonClasses\SmtpDetails.cs" />
     <Compile Include="JsonClasses\PersonalVerificationQuestionDetails.cs" />
     <Compile Include="JsonClasses\SmtpVerification.cs" />
+    <Compile Include="JsonClasses\StatusUpdate.cs" />
+    <Compile Include="JsonClasses\UdpPorts.cs" />
     <Compile Include="JsonClasses\UserDetails.cs" />
     <Compile Include="NamespaceAdjustmentBinder.cs" />
     <Compile Include="JsonClasses\JsonObject.cs" />

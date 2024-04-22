@@ -42,7 +42,31 @@ namespace YouChatServer.ChatHandler
                 }
             }
             return chats;
+        }
+        public static List<string> GetUserAllChatUsernames(string username) 
+        {
+            List<string> usernames;
+            HashSet<string> uniqueUsernames = new HashSet<string>();
+            ChatDetails chat;
+            List<ChatParticipant> chatParticipantList;
+            string name;
+            foreach (KeyValuePair<string, ChatDetails> chatEntry in AllChats)
+            {
+                chat = chatEntry.Value;
+                if (chat.UserExist(username))
+                {
+                    chatParticipantList = chat.ChatParticipants;
+                    foreach(ChatParticipant chatParticipant in chatParticipantList)
+                    {
+                        name = chatParticipant.Username;
 
+                        if (name != username)
+                            uniqueUsernames.Add(name);
+                    }
+                }
+            }
+            usernames =  new List<string>(uniqueUsernames);
+            return usernames;
         }
     }
 }

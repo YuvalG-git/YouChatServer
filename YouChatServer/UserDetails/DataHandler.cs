@@ -2370,7 +2370,7 @@ namespace YouChatServer.UserDetails
                 int x = cmd.ExecuteNonQuery();
                 connection.Close();
                 bool isNeededToAddColumn = false;
-                for (int index = 1; index< ChatMembers.Count; index++)
+                for (int index = 1; index < ChatMembers.Count; index++)
                 {
                     if (isNeededToAddColumn || CheckFullChatsCapacity(ChatName, ChatTagLine))
                     {
@@ -2644,7 +2644,7 @@ namespace YouChatServer.UserDetails
                 string columnName = "";
                 if (Reader.Read())
                 {
-                    for (int i = 7; i < Reader.FieldCount; i++) //0 - id, 1- username
+                    for (int i = 8; i < Reader.FieldCount; i++) //0 - id, 1- username
                     {
                         var Value = Reader[i];
                         if (Reader.IsDBNull(i) || Reader[i] == null)

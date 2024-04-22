@@ -19,13 +19,25 @@ namespace YouChatServer.JsonClasses
 
         public string SymmetricKey
         {
-            get { return _symmetricKey; }
-            set { _symmetricKey = value; }
+            get 
+            { 
+                return _symmetricKey;
+            }
+            set 
+            { 
+                _symmetricKey = value;
+            }
         }
         public string AsymmetricKey
         {
-            get { return _asymmetricKey; }
-            set { _asymmetricKey = value; }
+            get
+            { 
+                return _asymmetricKey;
+            }
+            set 
+            { 
+                _asymmetricKey = value;
+            }
         }
 
     }

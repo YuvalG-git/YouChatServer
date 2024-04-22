@@ -35,9 +35,6 @@ namespace YouChatServer.UdpHandler
                 byte[] serverEncryptedData = Encryption.Encryption.EncryptDataToBytes(friendKey, decryptedData);
                 AudioUdpClient.Send(serverEncryptedData, serverEncryptedData.Length, friendIpEndPoint);
             }
-
-            //byte[] imageData = AudioUdpClient.Receive(ref clientEndPoint);
-            //AudioUdpClient.Send(imageData, imageData.Length, clientEndPoint);
         }
     }
 }

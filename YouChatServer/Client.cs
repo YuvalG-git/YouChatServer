@@ -647,24 +647,21 @@ namespace YouChatServer
                                 smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress); //sends if he is offline so he know and if he is online so he will know to look there...
 
                                 //to check if he is online...
-                                if (UserIsOnline(FriendRequestReceiverUsername))
-                                {
-                                    string profilePicture = DataHandler.GetProfilePicture(FriendRequestSenderUsername);
-                                    DateTime currentTime = DateTime.Now;
-                                    DateTime requestDate = DataHandler.GetFriendRequestDate(FriendRequestSenderUsername,FriendRequestReceiverUsername, currentTime);
+                                string profilePicture = DataHandler.GetProfilePicture(FriendRequestSenderUsername);
+                                DateTime currentTime = DateTime.Now;
+                                DateTime requestDate = DataHandler.GetFriendRequestDate(FriendRequestSenderUsername, FriendRequestReceiverUsername, currentTime);
 
-                                    if (profilePicture != "" && requestDate != currentTime)
+                                if (profilePicture != "" && requestDate != currentTime)
+                                {
+                                    PastFriendRequest friendRequest = new PastFriendRequest(FriendRequestSenderUsername, profilePicture, requestDate);
+                                    JsonObject friendRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestReciever, friendRequest);
+                                    string friendRequestJson = JsonConvert.SerializeObject(friendRequestJsonObject, new JsonSerializerSettings
                                     {
-                                        PastFriendRequest friendRequest = new PastFriendRequest(FriendRequestSenderUsername, profilePicture, requestDate);
-                                        JsonObject friendRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestReciever, friendRequest);
-                                        string friendRequestJson = JsonConvert.SerializeObject(friendRequestJsonObject, new JsonSerializerSettings
-                                        {
-                                            TypeNameHandling = TypeNameHandling.Auto
-                                        });
-                                        Unicast(friendRequestJson, FriendRequestReceiverUsername);
-                                         //todo - need to handle in the client side how it will work
-                                         //need to handle when logging in if there were message request sent before...
-                                    }
+                                        TypeNameHandling = TypeNameHandling.Auto
+                                    });
+                                    Unicast(friendRequestJson, FriendRequestReceiverUsername);
+                                    //todo - need to handle in the client side how it will work
+                                    //need to handle when logging in if there were message request sent before...
                                 }
                             }
                             else
@@ -726,19 +723,16 @@ namespace YouChatServer
                         });
                         SendMessage(friendRequestSenderUsernameContactAndChatJson);
 
-                       
-                        if (UserIsOnline(FriendRequestSenderUsername))
-                        {
-                            ContactDetails friendRequestReceiverUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestReceiverUsername);
-                            ContactAndChat friendRequestReceiverUsernameContactAndChat = new ContactAndChat(directChat, friendRequestReceiverUsernameContact);
 
-                            JsonObject friendRequestReceiverUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestReceiverUsernameContactAndChat);
-                            string friendRequestReceiverUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestReceiverUsernameContactAndChatJsonObject, new JsonSerializerSettings
-                            {
-                                TypeNameHandling = TypeNameHandling.Auto
-                            });
-                            Unicast(friendRequestReceiverUsernameContactAndChatJson, FriendRequestSenderUsername);
-                        }
+                        ContactDetails friendRequestReceiverUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestReceiverUsername);
+                        ContactAndChat friendRequestReceiverUsernameContactAndChat = new ContactAndChat(directChat, friendRequestReceiverUsernameContact);
+
+                        JsonObject friendRequestReceiverUsernameContactAndChatJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever, friendRequestReceiverUsernameContactAndChat);
+                        string friendRequestReceiverUsernameContactAndChatJson = JsonConvert.SerializeObject(friendRequestReceiverUsernameContactAndChatJsonObject, new JsonSerializerSettings
+                        {
+                            TypeNameHandling = TypeNameHandling.Auto
+                        });
+                        Unicast(friendRequestReceiverUsernameContactAndChatJson, FriendRequestSenderUsername);
                     }
                     else
                     {
@@ -1306,6 +1300,113 @@ namespace YouChatServer
                 TypeNameHandling = TypeNameHandling.Auto
             });
             SendMessage(udpAudioConnectionRequestJson);
+        }
+        private void UpdateEndPoint(Dictionary<IPEndPoint, IPEndPoint> endpoints, IPEndPoint clientEndPoint, IPEndPoint newEndPoint)
+        {
+            var keys = endpoints.Keys.ToList();
+            foreach (var key in keys)
+            {
+                if (endpoints[key] == clientEndPoint)
+                {
+                    endpoints.Remove(key);
+                    endpoints[key] = newEndPoint;
+                }
+                else if (key == clientEndPoint)
+                {
+                    IPEndPoint value = endpoints[key];
+                    endpoints.Remove(key);
+                    endpoints[newEndPoint] = value;
+                }
+            }
+        }
+        
+        private void HandleUdpvideoConnectionRequestEnum(JsonObject jsonObject)
+        {
+            UdpPorts udpPorts = jsonObject.MessageBody as UdpPorts;
+            int audioPort = udpPorts.AudioPort;
+            int videoPort = udpPorts.VideoPort;
+            IPEndPoint audioIPEndPoint = new IPEndPoint(_clientAddress, audioPort);
+            IPEndPoint videoIPEndPoint = new IPEndPoint(_clientAddress, videoPort);
+
+            UpdateEndPoint(AudioUdpHandler.EndPoints, _clientIPEndPoint, audioIPEndPoint);
+            UpdateEndPoint(VideoUdpHandler.EndPoints, _clientIPEndPoint, videoIPEndPoint);
+
+            string udpSymmetricKey = RandomStringCreator.RandomString(32);
+            string EncryptedSymmerticKey = Rsa.Encrypt(udpSymmetricKey, ClientPublicKey);
+            AudioUdpHandler.clientKeys.Add(audioIPEndPoint, udpSymmetricKey);
+            JsonObject udpAudioConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionResponse, EncryptedSymmerticKey);
+            string udpAudioConnectionRequestJson = JsonConvert.SerializeObject(udpAudioConnectionRequestJsonObject, new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Auto
+            });
+            SendMessage(udpAudioConnectionRequestJson);
+        }
+        private void HandleUpdateProfileStatusRequestEnum(JsonObject jsonObject)
+        {
+            string status = jsonObject.MessageBody as string;
+            if (DataHandler.InsertStatus(_ClientNick, status) > 0)
+            {
+                StatusUpdate statusUpdate = new StatusUpdate(_ClientNick, status);
+                List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
+                JsonObject updateProfileStatusResponseSenderJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UpdateProfileStatusResponse_Sender, status);
+                string updateProfileStatusResponseSenderJson = JsonConvert.SerializeObject(updateProfileStatusResponseSenderJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(updateProfileStatusResponseSenderJson);
+                JsonObject updateProfileStatusResponseRecieverJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UpdateProfileStatusResponse_Reciever, statusUpdate);
+                string updateProfileStatusResponseRecieverJson = JsonConvert.SerializeObject(updateProfileStatusResponseRecieverJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                foreach (string friendName in friendNames)
+                {
+                    Unicast(updateProfileStatusResponseRecieverJson, friendName);
+                }
+            }
+        }
+        private void HandleUpdateProfilePictureRequestEnum(JsonObject jsonObject)
+        {
+            string profilePictureId = jsonObject.MessageBody as string;
+            if (DataHandler.InsertProfilePicture(_ClientNick, profilePictureId) > 0)
+            {
+                ProfilePictureUpdate profilePictureUpdate = new ProfilePictureUpdate(_ClientNick, profilePictureId);
+                List<string> friendNames = DataHandler.GetFriendList(_ClientNick);
+                List<string> commonChatUsers = ChatHandler.ChatHandler.GetUserAllChatUsernames(_ClientNick);
+
+                List<string> chatUsers_NotContants = new List<string>();
+                foreach (string friend in commonChatUsers)
+                {
+                    if (!friendNames.Contains(friend))
+                    {
+                        chatUsers_NotContants.Add(friend);
+                    }
+                }
+                JsonObject updateProfilePictureResponseSenderJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UpdateProfilePictureResponse_Sender, profilePictureId);
+                string updateProfilePictureResponseSenderJson = JsonConvert.SerializeObject(updateProfilePictureResponseSenderJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                SendMessage(updateProfilePictureResponseSenderJson);
+                JsonObject updateProfilePictureResponseContactRecieverJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UpdateProfilePictureResponse_ContactReciever, profilePictureUpdate);
+                string updateProfilePictureResponseContactRecieverJson = JsonConvert.SerializeObject(updateProfilePictureResponseContactRecieverJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                foreach (string friendName in friendNames)
+                {
+                    Unicast(updateProfilePictureResponseContactRecieverJson, friendName);
+                }
+                JsonObject updateProfilePictureResponseChatRecieverRecieverJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UpdateProfilePictureResponse_ChatUserReciever, profilePictureUpdate);
+                string updateProfilePictureResponseChatRecieverRecieverJsonO = JsonConvert.SerializeObject(updateProfilePictureResponseChatRecieverRecieverJsonObject, new JsonSerializerSettings
+                {
+                    TypeNameHandling = TypeNameHandling.Auto
+                });
+                foreach (string chatUser in chatUsers_NotContants)
+                {
+                    Unicast(updateProfilePictureResponseChatRecieverRecieverJsonO, chatUser);
+                }
+            }
         }
         private void HandleUserDetailsRequestEnum(JsonObject jsonObject)
         {
@@ -2134,6 +2235,12 @@ namespace YouChatServer
                             case EnumHandler.CommunicationMessageID_Enum.DeleteMessageRequest:
                                 HandleDeleteMessageRequestEnum(jsonObject);
                                 break;
+                            case EnumHandler.CommunicationMessageID_Enum.UpdateProfileStatusRequest:
+                                HandleUpdateProfileStatusRequestEnum(jsonObject);
+                                break;
+                            case EnumHandler.CommunicationMessageID_Enum.UpdateProfilePictureRequest:
+                                HandleUpdateProfilePictureRequestEnum(jsonObject);
+                                break;
 
                         }
                     }
@@ -2751,10 +2858,10 @@ namespace YouChatServer
 
                 while (totalBytesToSend.Length > 0)
                 {
-                    if (totalBytesToSend.Length > System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)
+                    if (totalBytesToSend.Length > System.Convert.ToInt32(_client.ReceiveBufferSize) - 8)
                     {
-                        bytesToSend = new byte[System.Convert.ToInt32(_client.ReceiveBufferSize) - 4];
-                        Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4); // to get a fixed size of the prefix to the message
+                        bytesToSend = new byte[System.Convert.ToInt32(_client.ReceiveBufferSize) - 8];
+                        Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 8); // to get a fixed size of the prefix to the message
                         byte[] buffer = BitConverter.GetBytes(0); //indicates it's not the last message...
 
                         byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
@@ -2769,9 +2876,9 @@ namespace YouChatServer
 
                         ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
                         ns.Flush();
-                        byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(_client.ReceiveBufferSize) - 4)];
+                        byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(_client.ReceiveBufferSize) - 8)];
 
-                        Array.Copy(totalBytesToSend, System.Convert.ToInt32(_client.ReceiveBufferSize) - 4, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
+                        Array.Copy(totalBytesToSend, System.Convert.ToInt32(_client.ReceiveBufferSize) - 8, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
                         totalBytesToSend = newTotalBytesToSend;
                     }
                     else

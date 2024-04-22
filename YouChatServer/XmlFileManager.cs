@@ -13,26 +13,27 @@ namespace YouChatServer
     {
         static string projectFolderPath = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
 
-        private string _filename;
+        //private string _filename;
         private string _filePath;
 
         public XmlFileManager(string filename, List<string> chatParticipants, string ChatId)
         {
-            _filename = filename;
-            InitializeXmlFile(chatParticipants, ChatId);
+            InitializeXmlFile(filename, chatParticipants, ChatId);
         }
-        public XmlFileManager(string filename)
+        public XmlFileManager(string filePath)
         {
-            _filename = filename;
+            _filePath = filePath;
         }
         public string GetFilePath()
         {
             return _filePath;
         }
 
-        private void InitializeXmlFile(List<string> chatParticipants, string ChatId)
+
+        private void InitializeXmlFile(string fileName, List<string> chatParticipants, string ChatId)
         {
-            if (!File.Exists(_filename))
+            _filePath = GetFilePath(fileName);
+            if (!File.Exists(_filePath))
             {
                 // Create a new XML document
                 XmlDocument doc = new XmlDocument();
@@ -43,7 +44,7 @@ namespace YouChatServer
 
                 // Create the chat name, chat id and participants elements
                 XmlElement chatNameElement = doc.CreateElement("ChatName");
-                chatNameElement.InnerText = _filename;
+                chatNameElement.InnerText = fileName;
                 rootElement.AppendChild(chatNameElement);
 
                 XmlElement chatIdElement = doc.CreateElement("ChatId");
@@ -66,8 +67,7 @@ namespace YouChatServer
 
 
                 // Save the XML document to the file
-                string filePath = GetFilePath(_filename);
-                doc.Save(filePath);
+                doc.Save(_filePath);
             }
         }
         private string GetFilePath(string fileName)
@@ -104,7 +104,7 @@ namespace YouChatServer
         {
             // Load the existing XML file
             XmlDocument doc = new XmlDocument();
-            doc.Load(_filename);
+            doc.Load(_filePath);
 
             // Find the message element to edit
             XmlNodeList messageNodes = doc.SelectNodes("//Message[Sender='" + sender + "' and Type='" + type + "' and Content='" + content + "' and Date='" + date.ToString("yyyy-MM-dd HH:mm:ss") + "']");
@@ -144,7 +144,7 @@ namespace YouChatServer
                     }
 
                     // Save the modified XML document back to the file
-                    doc.Save(_filename);
+                    doc.Save(_filePath);
                 }
             }
         }
@@ -161,7 +161,7 @@ namespace YouChatServer
         {
             // Load the existing XML file
             XmlDocument doc = new XmlDocument();
-            doc.Load(_filename);
+            doc.Load(_filePath);
 
             // Create a new message element
             XmlElement messageElement = doc.CreateElement("Message");
@@ -192,91 +192,12 @@ namespace YouChatServer
             root?.AppendChild(messageElement);
 
             // Save the modified XML document back to the file
-            doc.Save(_filename);
+            doc.Save(_filePath);
         }
 
-        public void EditChatName(string newChatName)
-        {
-            // Load the existing XML file
-            XmlDocument doc = new XmlDocument();
-            doc.Load(_filename);
+       
 
-            // Find the chat name element and update its value
-            XmlNode chatNameNode = doc.SelectSingleNode("/Chat/ChatName");
-            if (chatNameNode != null)
-            {
-                chatNameNode.InnerText = newChatName;
-            }
-
-            // Save the modified XML document back to the file
-            doc.Save(_filename);
-        }
-
-        public void EditParticipants(string newParticipants)
-        {
-            // Load the existing XML file
-            XmlDocument doc = new XmlDocument();
-            doc.Load(_filename);
-
-            // Find the participants element and update its value
-            XmlNode participantsNode = doc.SelectSingleNode("/Chat/Participants");
-            if (participantsNode != null)
-            {
-                participantsNode.InnerText = newParticipants;
-            }
-
-            // Save the modified XML document back to the file
-            doc.Save(_filename);
-        }
-
-        public void ClearData()
-        {
-            // Create an empty XML document
-            XmlDocument doc = new XmlDocument();
-
-            // Create the root element
-            XmlElement rootElement = doc.CreateElement("Messages");
-            doc.AppendChild(rootElement);
-
-            // Save the empty XML document to the file, overwriting existing content
-            doc.Save(_filename);
-        }
-
-        public void SaveData(XmlDocument doc)
-        {
-            // Save the XML document back to the file
-            doc.Save(_filename);
-        }
-
-        public XmlDocument LoadData()
-        {
-            // Load or create the XML file
-            return LoadOrCreateXmlDocument();
-        }
-
-        private XmlDocument LoadOrCreateXmlDocument()
-        {
-            XmlDocument doc = new XmlDocument();
-
-            if (File.Exists(_filename))
-            {
-                // Load the existing XML file
-                doc.Load(_filename);
-            }
-            else
-            {
-                // Create a new XML document
-                XmlDeclaration xmlDeclaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
-                XmlElement root = doc.DocumentElement;
-                doc.InsertBefore(xmlDeclaration, root);
-
-                // Create the root element
-                XmlElement rootElement = doc.CreateElement("Messages");
-                doc.AppendChild(rootElement);
-            }
-
-            return doc;
-        }
+       
         public List<MessageData> ReadChatXml()
         {
             List<MessageData> messages = new List<MessageData>();
@@ -284,7 +205,7 @@ namespace YouChatServer
             try
             {
                 XmlDocument xmlDoc = new XmlDocument();
-                xmlDoc.Load(_filename);
+                xmlDoc.Load(_filePath);
 
                 XmlElement root = xmlDoc.DocumentElement;
 
