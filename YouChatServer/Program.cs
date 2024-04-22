@@ -57,11 +57,9 @@ namespace YouChatServer
             Console.WriteLine("Simple TCP Server");
             Console.WriteLine("Listening to ip {0} port: {1}", ipAddress, portNo);
             Console.WriteLine("Server is ready.");
-            //AudioUdpClient = new UdpClient(11000);//udp listens to port 11000
-            VideoUdpClient = new UdpClient(12000);//udp listens to port 12000
-            VideoUdpClient.BeginReceive(new AsyncCallback(ReceiveVideoUdpMessage), null);//starts async listen too screen/camera sharing.
-            //AudioUdpClient.BeginReceive(new AsyncCallback(ReceiveAudioUdpMessage), null);
             AudioUdpHandler.StartAudioUdpClient();
+            VideoUdpHandler.StartAudioUdpClient();
+
             ClientsHistory = new Dictionary<string, ServerConnectAttemptCounter>();
             //ReceiveAndEchoImageUDP();
             // Start listen to incoming connection requests

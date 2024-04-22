@@ -119,9 +119,11 @@
     <Compile Include="JsonClasses\PersonalVerificationQuestionDetails.cs" />
     <Compile Include="JsonClasses\SmtpVerification.cs" />
     <Compile Include="JsonClasses\StatusUpdate.cs" />
+    <Compile Include="JsonClasses\UdpDetails.cs" />
     <Compile Include="JsonClasses\UdpPorts.cs" />
     <Compile Include="JsonClasses\UserDetails.cs" />
-    <Compile Include="NamespaceAdjustmentBinder.cs" />
+    <Compile Include="JsonClasses\VideoCallOverDetails.cs" />
+    <Compile Include="JsonClasses\JsonSerializationHandler\NamespaceAdjustmentBinder.cs" />
     <Compile Include="JsonClasses\JsonObject.cs" />
     <Compile Include="JsonClasses\LoginDetails.cs" />
     <Compile Include="JsonClasses\PersonalVerificationAnswers.cs" />
@@ -144,11 +146,10 @@
     <Compile Include="RandomStringCreator.cs" />
     <Compile Include="SmtpHandler.cs" />
     <Compile Include="UdpHandler\AudioUdpHandler.cs" />
+    <Compile Include="UdpHandler\IpEndPointHandler.cs" />
     <Compile Include="UdpHandler\VideoUdpHandler.cs" />
     <Compile Include="UserDetails\DataCreator.cs" />
     <Compile Include="UserDetails\DataHandler.cs" />
-    <Compile Include="VideoCallMembers.cs" />
-    <Compile Include="XmlDataHandler.cs" />
     <Compile Include="XmlFileManager.cs" />
     <EmbeddedResource Include="Properties\CaptchaBackground.resx">
       <Generator>ResXFileCodeGenerator</Generator>

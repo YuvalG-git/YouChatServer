@@ -12,7 +12,7 @@ namespace YouChatServer
     public class XmlFileManager
     {
         static string projectFolderPath = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
-
+        private static readonly string _encryptionKey = "YOUCHATAPPLICATION";
         //private string _filename;
         private string _filePath;
 

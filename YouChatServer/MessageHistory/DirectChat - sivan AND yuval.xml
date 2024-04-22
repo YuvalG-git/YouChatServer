@@ -125,4 +125,10 @@ how you doing?</Content>
     <Content>hi</Content>
     <Date>2024-04-20 19:54:37</Date>
   </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi cant talk right not</Content>
+    <Date>2024-04-22 17:20:27</Date>
+  </Message>
 </Chat>

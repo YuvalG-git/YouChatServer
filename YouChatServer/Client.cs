@@ -90,33 +90,6 @@ namespace YouChatServer
 
         private bool _isOnline;
         private bool _inCall;
-        /// <summary>
-        /// Represents the overall ID of the player
-        /// </summary>
-        private int PlayerNum;
-
-        /// <summary>
-        /// Represents the player's color
-        /// </summary>
-        private string _ClientColor;
-
-        /// <summary>
-        /// Shows if the player is the one who chooses the board's size
-        /// If he is, it will change to true
-        /// </summary>
-        private Boolean hasChosenSize = false;
-
-        /// <summary>
-        /// Represents if the player has chosen a color for the game yet
-        /// If he chose, it will change to true        
-        /// </summary>
-        private Boolean hasChosenColor = false;
-
-        /// <summary>
-        /// This boolean variable is true after the client disconnects
-        /// It was made due to an error...
-        /// </summary>
-        private Boolean hasLeft = false;
 
         /// <summary>
         /// Byte array which represents the data received from the client
@@ -293,16 +266,6 @@ namespace YouChatServer
             //ClientAttemptsState clientAttemptsState = null;
             //InitializeClientAttemptsStateObject(ref clientAttemptsState);
 
-        }
-        public CaptchaRotatingImageHandler GetCaptchaRotatingImageHandler()
-        {
-            return captchaRotatingImageHandler;
-        }
-
-        public static string RandomKey(int Length)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, Length).Select(s => s[Random.Next(s.Length)]).ToArray());
         }
         private void HandleEncryptionClientPublicKeySenderEnum(JsonObject jsonObject)
         {
@@ -1275,22 +1238,8 @@ namespace YouChatServer
             }
             IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
 
-            var keys = AudioUdpHandler.EndPoints.Keys.ToList();
-            foreach (var key in keys)
-            {
-                if (AudioUdpHandler.EndPoints[key] == _clientIPEndPoint)
-                {
-                    AudioUdpHandler.EndPoints.Remove(key);
-                    AudioUdpHandler.EndPoints[key] = iPEndPoint;
-                }
-                else if (key == _clientIPEndPoint)
-                {
-                    IPEndPoint value = AudioUdpHandler.EndPoints[key];
-                    AudioUdpHandler.EndPoints.Remove(key);
-                    AudioUdpHandler.EndPoints[iPEndPoint] = value;
-                }
-            }
-        
+            IpEndPointHandler.UpdateEndPoint(AudioUdpHandler.EndPoints, _clientIPEndPoint, iPEndPoint);
+
             string udpSymmetricKey = RandomStringCreator.RandomString(32);
             string EncryptedSymmerticKey = Rsa.Encrypt(udpSymmetricKey, ClientPublicKey);
             AudioUdpHandler.clientKeys.Add(iPEndPoint, udpSymmetricKey);
@@ -1301,26 +1250,10 @@ namespace YouChatServer
             });
             SendMessage(udpAudioConnectionRequestJson);
         }
-        private void UpdateEndPoint(Dictionary<IPEndPoint, IPEndPoint> endpoints, IPEndPoint clientEndPoint, IPEndPoint newEndPoint)
-        {
-            var keys = endpoints.Keys.ToList();
-            foreach (var key in keys)
-            {
-                if (endpoints[key] == clientEndPoint)
-                {
-                    endpoints.Remove(key);
-                    endpoints[key] = newEndPoint;
-                }
-                else if (key == clientEndPoint)
-                {
-                    IPEndPoint value = endpoints[key];
-                    endpoints.Remove(key);
-                    endpoints[newEndPoint] = value;
-                }
-            }
-        }
+
+
         
-        private void HandleUdpvideoConnectionRequestEnum(JsonObject jsonObject)
+        private void HandleUdpVideoConnectionRequestEnum(JsonObject jsonObject)
         {
             UdpPorts udpPorts = jsonObject.MessageBody as UdpPorts;
             int audioPort = udpPorts.AudioPort;
@@ -1328,18 +1261,24 @@ namespace YouChatServer
             IPEndPoint audioIPEndPoint = new IPEndPoint(_clientAddress, audioPort);
             IPEndPoint videoIPEndPoint = new IPEndPoint(_clientAddress, videoPort);
 
-            UpdateEndPoint(AudioUdpHandler.EndPoints, _clientIPEndPoint, audioIPEndPoint);
-            UpdateEndPoint(VideoUdpHandler.EndPoints, _clientIPEndPoint, videoIPEndPoint);
+            IpEndPointHandler.UpdateEndPoint(AudioUdpHandler.EndPoints, _clientIPEndPoint, audioIPEndPoint);
+            IpEndPointHandler.UpdateEndPoint(VideoUdpHandler.EndPoints, _clientIPEndPoint, videoIPEndPoint);
 
-            string udpSymmetricKey = RandomStringCreator.RandomString(32);
-            string EncryptedSymmerticKey = Rsa.Encrypt(udpSymmetricKey, ClientPublicKey);
-            AudioUdpHandler.clientKeys.Add(audioIPEndPoint, udpSymmetricKey);
-            JsonObject udpAudioConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionResponse, EncryptedSymmerticKey);
-            string udpAudioConnectionRequestJson = JsonConvert.SerializeObject(udpAudioConnectionRequestJsonObject, new JsonSerializerSettings
+            string udpAudioSymmetricKey = RandomStringCreator.RandomString(32);
+            string encryptedAudioSymmerticKey = Rsa.Encrypt(udpAudioSymmetricKey, ClientPublicKey);
+            AudioUdpHandler.clientKeys.Add(audioIPEndPoint, udpAudioSymmetricKey);
+
+            string udpVideoSymmetricKey = RandomStringCreator.RandomString(32);
+            string encryptedVideoSymmerticKey = Rsa.Encrypt(udpVideoSymmetricKey, ClientPublicKey);
+            VideoUdpHandler.clientKeys.Add(videoIPEndPoint, udpVideoSymmetricKey);
+
+            UdpDetails udpDetails = new UdpDetails(encryptedAudioSymmerticKey, encryptedVideoSymmerticKey);
+            JsonObject udpVideoConnectionRequestJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.UdpVideoConnectionResponse, udpDetails);
+            string udpVideoConnectionRequestJson = JsonConvert.SerializeObject(udpVideoConnectionRequestJsonObject, new JsonSerializerSettings
             {
                 TypeNameHandling = TypeNameHandling.Auto
             });
-            SendMessage(udpAudioConnectionRequestJson);
+            SendMessage(udpVideoConnectionRequestJson);
         }
         private void HandleUpdateProfileStatusRequestEnum(JsonObject jsonObject)
         {
@@ -1748,13 +1687,13 @@ namespace YouChatServer
         }
         private void HandleVideoCallAcceptanceRequestEnum(JsonObject jsonObject)
         {
-            HandleCallAcceptanceRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever);
+            HandleCallAcceptanceRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulVideoCallResponse_Reciever, true);
         }
         private void HandleAudioCallAcceptanceRequestEnum(JsonObject jsonObject)
         {
-            HandleCallAcceptanceRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.AudioCallAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulAudioCallResponse_Reciever);
+            HandleCallAcceptanceRequestEnum(jsonObject, EnumHandler.CommunicationMessageID_Enum.AudioCallAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum.SuccessfulAudioCallResponse_Reciever,false);
         }
-        private void HandleCallAcceptanceRequestEnum(JsonObject jsonObject, EnumHandler.CommunicationMessageID_Enum callAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum failedResponse)
+        private void HandleCallAcceptanceRequestEnum(JsonObject jsonObject, EnumHandler.CommunicationMessageID_Enum callAcceptanceResponse, EnumHandler.CommunicationMessageID_Enum failedResponse, bool HandleVideo)
         {
             string chatId = jsonObject.MessageBody as string;
             ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
@@ -1774,6 +1713,11 @@ namespace YouChatServer
                     IPEndPoint friendEndPoint = GetUserEndPoint(friendName);
                     AudioUdpHandler.EndPoints[_clientIPEndPoint] = friendEndPoint;
                     AudioUdpHandler.EndPoints[friendEndPoint] = _clientIPEndPoint;
+                    if (HandleVideo)
+                    {
+                        VideoUdpHandler.EndPoints[_clientIPEndPoint] = friendEndPoint;
+                        VideoUdpHandler.EndPoints[friendEndPoint] = _clientIPEndPoint;
+                    }
                 }
             }
             catch
@@ -1886,15 +1830,50 @@ namespace YouChatServer
         }
         private void HandleEndVideoCallRequestEnum(JsonObject jsonObject)
         {
-            HandleVideoCallRequest(jsonObject, EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Reciever);
-            Console.WriteLine("close");
-            JsonObject endVideoCallResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Sender, null);
-            string endVideoCallResponseJson = JsonConvert.SerializeObject(endVideoCallResponseJsonObject, new JsonSerializerSettings
+
+
+            VideoCallOverDetails videoCallOverDetails = jsonObject.MessageBody as VideoCallOverDetails;
+            string chatId = videoCallOverDetails.ChatId;
+            int audioPort = videoCallOverDetails.AudioSocketPort;
+            int videoPort = videoCallOverDetails.VideoSocketPort;
+
+            ChatDetails chat = ChatHandler.ChatHandler.AllChats[chatId];
+            try
             {
-                TypeNameHandling = TypeNameHandling.Auto
-            });
-            SendMessage(endVideoCallResponseJson);
+                DirectChatDetails directChat = (DirectChatDetails)chat;
+                string friendName = directChat.GetOtherUserName(_ClientNick);
+                if (isUserInCall(friendName) && isUserInCall(_ClientNick))
+                {
+                    JsonObject recieverVideoCallOverResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Reciever, null);
+                    string recieverVideoCallOverResponseJson = JsonConvert.SerializeObject(recieverVideoCallOverResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    Unicast(recieverVideoCallOverResponseJson, friendName);
+                    JsonObject senderVideoCallOverResponseJsonObject = new JsonObject(EnumHandler.CommunicationMessageID_Enum.EndVideoCallResponse_Sender, null);
+                    string senderVideoCallOverResponseJson = JsonConvert.SerializeObject(senderVideoCallOverResponseJsonObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.Auto
+                    });
+                    SendMessage(senderVideoCallOverResponseJson);
+                    _inCall = false;
+                    SetUserInCall(friendName, false);
+
+
+                    IPEndPoint audioIPEndPoint = new IPEndPoint(_clientAddress, audioPort);
+                    IpEndPointHandler.RemoveEndpoints(audioIPEndPoint, AudioUdpHandler.EndPoints, AudioUdpHandler.clientKeys);
+
+                    IPEndPoint videoIPEndPoint = new IPEndPoint(_clientAddress, videoPort);
+                    IpEndPointHandler.RemoveEndpoints(videoIPEndPoint, VideoUdpHandler.EndPoints, VideoUdpHandler.clientKeys);
+
+               
+                }
+            }
+            catch
+            {
+            }
         }
+        
         private void HandleEndAudioCallRequestEnum(JsonObject jsonObject)
         {
             AudioCallOverDetails callOverDetails = jsonObject.MessageBody as AudioCallOverDetails;
@@ -1922,57 +1901,8 @@ namespace YouChatServer
                     _inCall = false;
                     SetUserInCall(friendName, false);
 
-                    IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
-                    IPEndPoint friendIPEndPoint = null;
-                    List<IPEndPoint> keysToRemove = new List<IPEndPoint>();
-
-                    foreach (var keyValuePair in AudioUdpHandler.EndPoints)
-                    {
-                        if (keyValuePair.Key.Address.Equals(iPEndPoint.Address) && keyValuePair.Key.Port == iPEndPoint.Port)
-                        {
-                            friendIPEndPoint = keyValuePair.Value;
-                            keysToRemove.Add(keyValuePair.Key);
-                        }
-                        else if (keyValuePair.Value.Address.Equals(iPEndPoint.Address) && keyValuePair.Value.Port == iPEndPoint.Port)
-                        {
-                            friendIPEndPoint = keyValuePair.Key;
-                            keysToRemove.Add(keyValuePair.Key);
-                        }
-                    }
-
-                    foreach (var key in keysToRemove)
-                    {
-                        AudioUdpHandler.EndPoints.Remove(key);
-                        AudioUdpHandler.clientKeys.Remove(key);
-                    }
-
-                    if (friendIPEndPoint != null) //to make sure it gets deleted...
-                    {
-                        AudioUdpHandler.clientKeys.Remove(friendIPEndPoint);
-                    }
-
-                    //IPEndPoint iPEndPoint = new IPEndPoint(_clientAddress, port);
-                    //IPEndPoint friendIPEndPoint = null;
-
-                    //var keys = AudioUdpHandler.EndPoints.Keys.ToList();
-
-                    //foreach (var key in keys)
-                    //{
-                    //    if (key == iPEndPoint)
-                    //    {
-                    //        friendIPEndPoint = AudioUdpHandler.EndPoints[key];
-                    //        AudioUdpHandler.EndPoints.Remove(key);
-                    //    }
-                    //    else if (AudioUdpHandler.EndPoints[key] == iPEndPoint)
-                    //    {
-                    //        friendIPEndPoint = key;
-                    //        AudioUdpHandler.EndPoints.Remove(key);
-                    //    }
-                    //}
-                    //AudioUdpHandler.clientKeys.Remove(iPEndPoint);
-                    //AudioUdpHandler.clientKeys.Remove(friendIPEndPoint);
-
-
+                    IPEndPoint audioIPEndPoint = new IPEndPoint(_clientAddress, port);
+                    IpEndPointHandler.RemoveEndpoints(audioIPEndPoint, AudioUdpHandler.EndPoints, AudioUdpHandler.clientKeys);
                 }
             }
             catch
@@ -2229,6 +2159,9 @@ namespace YouChatServer
                             case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
                                 HandleUdpAudioConnectionRequestEnum(jsonObject);
                                 break;
+                            case EnumHandler.CommunicationMessageID_Enum.UdpVideoConnectionRequest:
+                                HandleUdpVideoConnectionRequestEnum(jsonObject);
+                                break;
                             case EnumHandler.CommunicationMessageID_Enum.EndAudioCallRequest:
                                 HandleEndAudioCallRequestEnum(jsonObject);
                                 break;
@@ -2260,7 +2193,7 @@ namespace YouChatServer
                     //Broadcast(_ClientNick + " has left the chat.");
                 }
             }
-           
+
         }//end R
 
         /// <summary>
@@ -2751,53 +2684,53 @@ namespace YouChatServer
         /// The SendMessage method sends a message to the connected client
         /// </summary>
         /// <param name = "message" > Represents the message the server sends to the connected client</param>
-        public void SendMessage(string jsonMessage, bool needEncryption = true)
-        {
-            if (_client != null)
-            {
-                try
-                {
-                    System.Net.Sockets.NetworkStream ns;
-                    // we use lock to present multiple threads from using the networkstream object
-                    // this is likely to occur when the server is connected to multiple clients all of 
-                    // them trying to access to the networkstram at the same time.
-                    lock (_client.GetStream())
-                    {
-                        ns = _client.GetStream();
-                    }
+        //public void SendMessage(string jsonMessage, bool needEncryption = true)
+        //{
+        //    if (_client != null)
+        //    {
+        //        try
+        //        {
+        //            System.Net.Sockets.NetworkStream ns;
+        //            // we use lock to present multiple threads from using the networkstream object
+        //            // this is likely to occur when the server is connected to multiple clients all of 
+        //            // them trying to access to the networkstram at the same time.
+        //            lock (_client.GetStream())
+        //            {
+        //                ns = _client.GetStream();
+        //            }
 
-                    byte signal = needEncryption ? (byte)1 : (byte)0;
+        //            byte signal = needEncryption ? (byte)1 : (byte)0;
 
-                    if (needEncryption)
-                    {
-                        jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
-                    }
-                    string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
-                    Console.WriteLine(messageToSend);
+        //            if (needEncryption)
+        //            {
+        //                jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
+        //            }
+        //            string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
+        //            Console.WriteLine(messageToSend);
 
-                    // Send data to the client
-                    byte[] bytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
+        //            // Send data to the client
+        //            byte[] bytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
 
-                    // Prefixes 4 Bytes Indicating Message Length
-                    byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
-                    byte[] prefixedBuffer = new byte[bytesToSend.Length + sizeof(int)]; // the maximum size of int number in bytes array
+        //            // Prefixes 4 Bytes Indicating Message Length
+        //            byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
+        //            byte[] prefixedBuffer = new byte[bytesToSend.Length + sizeof(int)]; // the maximum size of int number in bytes array
 
-                    Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
-                    Array.Copy(bytesToSend, 0, prefixedBuffer, sizeof(int), bytesToSend.Length); // add the prefix to the message
-                    Console.WriteLine(prefixedBuffer.ToString());
-                    // Actually send it
+        //            Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
+        //            Array.Copy(bytesToSend, 0, prefixedBuffer, sizeof(int), bytesToSend.Length); // add the prefix to the message
+        //            Console.WriteLine(prefixedBuffer.ToString());
+        //            // Actually send it
 
-                    ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
-                    ns.Flush();
-                    //ns.Write(bytesToSend, 0, bytesToSend.Length);
-                    //ns.Flush();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-        }//end SendMessage
+        //            ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+        //            ns.Flush();
+        //            //ns.Write(bytesToSend, 0, bytesToSend.Length);
+        //            //ns.Flush();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine(ex.ToString());
+        //        }
+        //    }
+        //}//end SendMessage
 
         public void Unicast(string jsonMessage, string UserID)
         {
@@ -2830,7 +2763,7 @@ namespace YouChatServer
             }       
         }
 
-        public void SendMessage2(string jsonMessage, bool needEncryption = true)
+        public void SendMessage(string jsonMessage, bool needEncryption = true)
         {
             try
             {
@@ -2851,6 +2784,7 @@ namespace YouChatServer
                 }
                 string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
                 Console.WriteLine(messageToSend);
+                Console.WriteLine(jsonMessage);
 
                 // Send data to the client
                 byte[] totalBytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
@@ -2864,7 +2798,7 @@ namespace YouChatServer
                         Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 8); // to get a fixed size of the prefix to the message
                         byte[] buffer = BitConverter.GetBytes(0); //indicates it's not the last message...
 
-                        byte[] length = BitConverter.GetBytes(bytesToSend.Length); // the length of the message in byte array
+                        byte[] length = BitConverter.GetBytes(bytesToSend.Length + sizeof(int)); // the length of the message in byte array
                         byte[] prefixedBuffer = new byte[bytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
 
                         Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
@@ -2885,7 +2819,7 @@ namespace YouChatServer
                     {
                         byte[] buffer = BitConverter.GetBytes(1); //indicates it's the last message...
 
-                        byte[] length = BitConverter.GetBytes(totalBytesToSend.Length); // the length of the message in byte array
+                        byte[] length = BitConverter.GetBytes(totalBytesToSend.Length + sizeof(int)); // the length of the message in byte array
                         byte[] prefixedBuffer = new byte[totalBytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
 
                         Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
