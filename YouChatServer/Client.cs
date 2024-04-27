@@ -31,20 +31,12 @@ namespace YouChatServer
     /// </summary>
     class Client
     {
-
         /// <summary>
         /// This Stores a list of all clients connecting to the server:
         /// The list is static so all the clients will be able to obtain the list of current connected client
         /// </summary>
         public static Hashtable AllClients = new Hashtable();
 
-        //private Dictionary<string, int> _clientFailedAttempts = new Dictionary<string, int>();
-        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientLoginFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientRegistrationFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientPasswordUpdateFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-        //private Dictionary<IPEndPoint, ClientAttemptsState> _clientPasswordResetFailedAttempts = new Dictionary<IPEndPoint, ClientAttemptsState>();
-
-        //private Dictionary<IPEndPoint, ClientCaptchaRotationImagesAttemptsState> _clientCaptchaRotationImagesAttemptsState = new Dictionary<IPEndPoint, ClientCaptchaRotationImagesAttemptsState>();
         private ClientAttemptsState _LoginFailedAttempts;
         private ClientAttemptsState _RegistrationFailedAttempts;
         private ClientAttemptsState _RegistrationSmtpFailedAttempts;
@@ -82,6 +74,7 @@ namespace YouChatServer
         private IPAddress _clientAddress;
         private IPEndPoint _clientIPEndPoint;
 
+        private byte[] dataHistory;
 
         /// <summary>
         /// Represents the client username
@@ -100,117 +93,9 @@ namespace YouChatServer
         static Random Random = new Random();
 
         private bool isClientConnected;
-        /// <summary>
-        /// Request/Response kinds' which are used in sending and recieving messages
-        /// </summary>
-        const int EncryptionClientPublicKeySender = 39;
-        const int EncryptionServerPublicKeyReciever = 40;
-        const int EncryptionSymmetricKeyReciever = 41;
-        const int PasswordRenewalMessageRequest = 42;
-        const int PasswordRenewalMessageResponse = 43;
-        const int InitialProfileSettingsCheckRequest = 44;
-        const int InitialProfileSettingsCheckResponse = 45;
-        const int FriendRequestSender = 48;
-        const int FriendRequestReceiver = 49;
-        const int FriendRequestResponseSender = 50;
-        const int FriendRequestResponseReceiver = 51;
-        const int FriendsProfileDetailsRequest = 52;
-        const int FriendsProfileDetailsResponse = 53;
-        const int PasswordUpdateRequest = 54;
-        const int PasswordUpdateResponse = 55;
-        const int UserConnectionCheckRequest = 56;
-        const int UserConnectionCheckResponse = 57;
-        const int PastFriendRequestsRequest = 58;
-        const int PastFriendRequestsResponse = 59;
-        public const int BlockBeginning = 60;
-        public const int BlockEnding = 61;
-        const int VideoCallRequest = 62;
-        const int VideoCallResponse = 63;
-        const int VideoCallResponseSender = 64;
-        const int VideoCallResponseReciever = 65;
-        const int GroupCreatorRequest = 66;
-        const int GroupCreatorResponse = 67;
-        const int UserDetailsRequest = 46;
-        const int UserDetailsResponse = 47;
-        const int registerRequest = 1;
-        const int registerResponse = 2;
-        const int loginRequest = 3;
-        const int loginResponse = 4;
-        const int colorRequest = 5;
-        const int colorResponse = 6;
-        const int playersNumRequest = 7;
-        const int playersNumResponse = 8;
-        const int boardSizeSender = 9;
-        const int boardSizeRequest = 10;
-        const int boardSizeResponse = 11;
-        const int oppenentDetailsRequest = 12;
-        const int oppenentDetailsResponse = 13;
-        const int coordinatesSender = 14;
-        const int coordinatesReciever = 15;
-        const int skipTurnSender = 16;
-        const int skipTurnReciever = 17;
-        const int endGameRequest = 18;
-        const int endGameResponse = 19;
-        const int disconnectRequest = 20;
-        const int loadingModeRequest = 21;
-        const int lastGameRequest = 22;
-        const int lastGameResponse = 23;
-        const int anotherGameRequest = 24;
-        const int anotherGameResponse = 25;
-        const int leaveGameRequest = 26;
-        const int sendMessageRequest = 28;
-        const int sendMessageResponse = 29;
-        const int ContactInformationRequest = 33;
-        const int ContactInformationResponse = 34;
-        const int UploadProfilePictureRequest = 35;
-        const int UploadProfilePictureResponse = 36;
-        const int UploadStatusRequest = 37;
-        const int UploadStatusResponse = 38;
-        const int ResetPasswordRequest = 30;
-        const int ResetPasswordResponse = 31;
-        const string loginResponse1 = "The login has been successfully completed";
-        const string loginResponse2 = "The login has failed";
-        const string loginResponse3 = "You need to change your password";
-        const string loginResponse4 = "The login has been successfully completed but You haven't selected profile picture and status yet";
-        const string loginResponse5 = "The login has been successfully completed but You haven't selected status yet";
-
-        const string ResetPasswordResponse1 = "The username and email address were matching";
-        const string ResetPasswordResponse2 = "The username and email address weren't matching";
-
-        const string registerResponse1 = "Your registeration has completed successfully \nPlease press the back button to return to the home screen and login";
-        const string registerResponse2 = "Your registeration has failed \nPlease try again ";
-        const string colorResponse1 = "You have chosen the coolest color";
-        const string colorResponse2 = "An error occurred to happen \nChoose a new Color";
-        const string colorResponse3 = "Your oppoenent has already chosen this color \nPlease choose a diffrenet color";
-
-        const string InitialProfileSettingsCheckResponse1 = "The login has been successfully completed but you need to change your password";
-        const string InitialProfileSettingsCheckResponse2 = "The login has been successfully completed but You haven't selected profile picture and status yet";
-        const string InitialProfileSettingsCheckResponse3 = "The login has been successfully completed but You haven't selected status yet";
-        const string InitialProfileSettingsCheckResponse4 = "The login has been successfully completed";
-
-        const string PasswordMessageResponse1 = "This password has already been chosen by you before";
-        const string PasswordMessageResponse2 = "Your new password has been saved";
-        const string PasswordMessageResponse3 = "An error occured";
-        const string PasswordMessageResponse4 = "Your past details aren't matching";
-        const string FriendRequestResponseSender1 = "Approval";
-        const string FriendRequestResponseSender2 = "Rejection";
-        public const string BanBeginning = "You are banned";
-        public const string BanEnding = "Your ban is over";
-        const string VideoCallResponse1 = "Your friend is offline. Please try to call again.";
-        const string VideoCallResponse2 = "You have been asked to join a call";
-        const string VideoCallResponseResult1 = "Joining the video call";
-        const string VideoCallResponseResult2 = "Declining the video call";
-        const string GroupCreatorResponse1 = "Group was successfully created";
-
-
-
-        const string RightSmtpCode = "right";
-        const string WrongSmtpCode = "wrong";
-
-        /// <summary>
-        /// Represents rather the nickname has been sent
-        /// </summary>
-        private bool ReceiveNick = true;
+      
+        const string ApprovalFriendRequestResponse = "Approval";
+        const string RejectionFriendRequestResponse = "Rejection";
 
 
         private RSAServiceProvider Rsa;
@@ -240,6 +125,7 @@ namespace YouChatServer
 
             // Read data from the client async
             data = new byte[_client.ReceiveBufferSize];
+            dataHistory = new byte[0];
 
             // BeginRead will begin async read from the NetworkStream
             // This allows the server to remain responsive and continue accepting new connections from other clients
@@ -598,7 +484,7 @@ namespace YouChatServer
                         else if (DataHandler.IsFriendRequestPending(FriendRequestReceiverUsername, FriendRequestSenderUsername)) //the other user already send to you
                         {
                             //handle accept request...
-                            HandleFriendRequestResponse(FriendRequestReceiverUsername, FriendRequestSenderUsername, FriendRequestResponseSender1);
+                            HandleFriendRequestResponse(FriendRequestReceiverUsername, FriendRequestSenderUsername, ApprovalFriendRequestResponse);
                         }
                         else
                         {
@@ -652,7 +538,7 @@ namespace YouChatServer
         {
             if (DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
             {
-                if (FriendRequestStatus == FriendRequestResponseSender1)
+                if (FriendRequestStatus == ApprovalFriendRequestResponse)
                 {
                     if ((DataHandler.CheckFullFriendsCapacity(FriendRequestSenderUsername)) || (DataHandler.CheckFullFriendsCapacity(FriendRequestReceiverUsername)))
                     {
@@ -703,7 +589,7 @@ namespace YouChatServer
                     }
                     //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
                 }
-                else if (FriendRequestStatus == FriendRequestResponseSender2)
+                else if (FriendRequestStatus == RejectionFriendRequestResponse)
                 {
                     // doesn't really need to do something... maybe in the future i will think abt something
                 }
@@ -1399,7 +1285,7 @@ namespace YouChatServer
                 //ClientAttemptsState clientAttemptsState = null;
                 //InitializeClientAttemptsStateObject(ref clientAttemptsState);
                 _LoginFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.Login);
-                if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
+                if (PasswordUpdate.IsNeededToUpdatePassword(_ClientNick)) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
                 {
                     PersonalVerificationAnswersNextPhaseEnum = EnumHandler.CommunicationMessageID_Enum.SuccessfulPersonalVerificationAnswersResponse_UpdatePassword;
                 }
@@ -2004,187 +1890,191 @@ namespace YouChatServer
                     }
                     else // client still connected
                     {
-                        string messageReceived = System.Text.Encoding.ASCII.GetString(data, 0, bytesRead);
-                        byte receivedByteSignal = (byte)messageReceived[0];
-                        string actualMessage = messageReceived.Substring(1);
-                        // if the client is sending send me datatable
-                        if (receivedByteSignal == 1)
+                        byte[] buffer = new byte[4];
+                        Array.Copy(data, 0, buffer, 0, 4);
+
+                        int value = BitConverter.ToInt32(buffer, 0);
+                        int newLength = dataHistory.Length + bytesRead - 4;
+
+                        // Create a new array to hold the combined data
+                        byte[] newDataHistory = new byte[newLength];
+
+                        // Copy the existing dataHistory to the new array
+                        Array.Copy(dataHistory, 0, newDataHistory, 0, dataHistory.Length);
+
+                        // Copy the MessageData to the end of the new array
+                        Array.Copy(data, 4, newDataHistory, dataHistory.Length, bytesRead - 4);
+
+                        // Assign the new array to dataHistory
+                        dataHistory = newDataHistory;
+
+                        if (value == 1)
                         {
-                            actualMessage = Encryption.Encryption.DecryptData(SymmetricKey, actualMessage);
+                            string messageReceived = System.Text.Encoding.ASCII.GetString(dataHistory, 0, dataHistory.Length);
+                            byte receivedByteSignal = (byte)messageReceived[0];
+                            string actualMessage = messageReceived.Substring(1);
+                            // if the client is sending send me datatable
+                            if (receivedByteSignal == 1)
+                            {
+                                actualMessage = Encryption.Encryption.DecryptData(SymmetricKey, actualMessage);
+                            }
+                            JsonObject jsonObject = JsonConvert.DeserializeObject<JsonObject>(actualMessage, new JsonSerializerSettings
+                            {
+                                TypeNameHandling = TypeNameHandling.Auto,
+                                Binder = new NamespaceAdjustmentBinder(),
+                                Converters = { new EnumConverter<EnumHandler.CommunicationMessageID_Enum>() }
+                            });
+                            EnumHandler.CommunicationMessageID_Enum messageType = (EnumHandler.CommunicationMessageID_Enum)jsonObject.MessageType;
+
+                            switch (messageType)
+                            {
+                                case EnumHandler.CommunicationMessageID_Enum.EncryptionClientPublicKeySender:
+                                    HandleEncryptionClientPublicKeySenderEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.loginRequest:
+                                    HandleLoginRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.FriendRequestSender:
+                                    HandleFriendRequestSenderEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_SmtpRegistrationMessage:
+                                    HandleRegistrationRequest_SmtpRegistrationMessageEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_SmtpRegistrationCode:
+                                    HandleRegistrationRequest_SmtpRegistrationCodeEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_Registration:
+                                    HandleRegistrationRequest_RegistrationEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UploadProfilePictureRequest:
+                                    HandleRegistrationRequest_UploadProfilePictureRequest(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UploadStatusRequest:
+                                    HandleRegistrationRequest_UploadStatusRequest(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.LoginRequest_SmtpLoginCode:
+                                    HandleLoginRequest_SmtpLoginCode(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.loginRequest_SmtpLoginMessage:
+                                    HandleloginRequest_SmtpLoginMessage(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.CaptchaImageRequest:
+                                    HandleCaptchaImageRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.CaptchaCodeRequest:
+                                    HandleCaptchaCodeRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.CaptchaImageAngleRequest:
+                                    HandleCaptchaImageAngleRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.SendMessageRequest:
+                                    HandleSendMessageRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.Disconnect:
+                                    HandleDisconnectEnum();
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.PersonalVerificationAnswersRequest:
+                                    HandlePersonalVerificationAnswersRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.PasswordUpdateRequest:
+                                    HandlePasswordUpdateRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckRequest:
+                                    HandleInitialProfileSettingsCheckRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UserDetailsRequest:
+                                    HandleUserDetailsRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseSender:
+                                    HandleFriendRequestResponseSenderEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest:
+                                    HandleResetPasswordRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest_SmtpCode:
+                                    HandleResetPasswordRequest_SmtpCodeEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest_SmtpMessage:
+                                    HandleResetPasswordRequest_SmtpMessageEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.PastFriendRequestsRequest:
+                                    HandlePastFriendRequestsRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.PasswordRenewalMessageRequest:
+                                    HandlePasswordRenewalMessageRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.ContactInformationRequest:
+                                    HandleContactInformationRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.ChatInformationRequest:
+                                    HandleChatInformationRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.GroupCreatorRequest:
+                                    HandleGroupCreatorRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallRequest:
+                                    HandleVideoCallRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceRequest:
+                                    HandleVideoCallAcceptanceRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallDenialRequest:
+                                    HandleVideoCallDenialRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallMuteRequest:
+                                    HandleVideoCallMuteRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallUnmuteRequest:
+                                    HandleVideoCallUnmuteRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOnRequest:
+                                    HandleVideoCallCameraOnRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOffRequest:
+                                    HandleVideoCallCameraOffRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.EndVideoCallRequest:
+                                    HandleEndVideoCallRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.MessageHistoryRequest:
+                                    HandleMessageHistoryRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.AudioCallRequest:
+                                    HandleAudioCallRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.AudioCallAcceptanceRequest:
+                                    HandleAudioCallAcceptanceRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.AudioCallDenialRequest:
+                                    HandleAudioCallDenialRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
+                                    HandleUdpAudioConnectionRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UdpVideoConnectionRequest:
+                                    HandleUdpVideoConnectionRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.EndAudioCallRequest:
+                                    HandleEndAudioCallRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.DeleteMessageRequest:
+                                    HandleDeleteMessageRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UpdateProfileStatusRequest:
+                                    HandleUpdateProfileStatusRequestEnum(jsonObject);
+                                    break;
+                                case EnumHandler.CommunicationMessageID_Enum.UpdateProfilePictureRequest:
+                                    HandleUpdateProfilePictureRequestEnum(jsonObject);
+                                    break;
+                            }
+                            dataHistory = new byte[0];
                         }
-                        JsonObject jsonObject = JsonConvert.DeserializeObject<JsonObject>(actualMessage, new JsonSerializerSettings
+                        if (isClientConnected)
                         {
-                            TypeNameHandling = TypeNameHandling.Auto,
-                            Binder = new NamespaceAdjustmentBinder(),
-                            Converters = { new EnumConverter<EnumHandler.CommunicationMessageID_Enum>() }
-                        });
-                        EnumHandler.CommunicationMessageID_Enum messageType = (EnumHandler.CommunicationMessageID_Enum)jsonObject.MessageType;
-
-                        switch (messageType)
-                        {
-                            case EnumHandler.CommunicationMessageID_Enum.EncryptionClientPublicKeySender:
-                                HandleEncryptionClientPublicKeySenderEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.loginRequest:
-                                HandleLoginRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.FriendRequestSender:
-                                HandleFriendRequestSenderEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_SmtpRegistrationMessage:
-                                HandleRegistrationRequest_SmtpRegistrationMessageEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_SmtpRegistrationCode:
-                                HandleRegistrationRequest_SmtpRegistrationCodeEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.RegistrationRequest_Registration:
-                                HandleRegistrationRequest_RegistrationEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UploadProfilePictureRequest:
-                                HandleRegistrationRequest_UploadProfilePictureRequest(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UploadStatusRequest:
-                                HandleRegistrationRequest_UploadStatusRequest(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.LoginRequest_SmtpLoginCode:
-                                HandleLoginRequest_SmtpLoginCode(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.loginRequest_SmtpLoginMessage:
-                                HandleloginRequest_SmtpLoginMessage(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.CaptchaImageRequest:
-                                HandleCaptchaImageRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.CaptchaCodeRequest:
-                                HandleCaptchaCodeRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.CaptchaImageAngleRequest:
-                                HandleCaptchaImageAngleRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.SendMessageRequest:
-                                HandleSendMessageRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.Disconnect:
-                                HandleDisconnectEnum();
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.PersonalVerificationAnswersRequest:
-                                HandlePersonalVerificationAnswersRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.PasswordUpdateRequest:
-                                HandlePasswordUpdateRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.InitialProfileSettingsCheckRequest:
-                                HandleInitialProfileSettingsCheckRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UserDetailsRequest:
-                                HandleUserDetailsRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.ChatSettingsChangeRequest:
-                                ChatSettings chatSettings = jsonObject.MessageBody as ChatSettings;
-                                byte textSizeProperty = (byte)chatSettings.TextSizeProperty; 
-                                short messageGapProperty = (short)chatSettings.MessageGapProperty;
-                                bool enterKeyPressedProperty = chatSettings.EnterKeyPressedProperty;
-                                if (DataHandler.UpdateChatSettings(_ClientNick,textSizeProperty,messageGapProperty, enterKeyPressedProperty) > 0)
-                                {
-                                    //to send a message saying it was successful...
-                                }
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseSender:
-                                HandleFriendRequestResponseSenderEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest:
-                                HandleResetPasswordRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest_SmtpCode:
-                                HandleResetPasswordRequest_SmtpCodeEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.ResetPasswordRequest_SmtpMessage:
-                                HandleResetPasswordRequest_SmtpMessageEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.PastFriendRequestsRequest:
-                                HandlePastFriendRequestsRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.PasswordRenewalMessageRequest:
-                                HandlePasswordRenewalMessageRequestEnum(jsonObject);
-                                break;
-                            //case EnumHandler.CommunicationMessageID_Enum.ChatAndContactDetailsRequest:
-                            //    HandleContactInformationRequestEnum(jsonObject);
-                            //    HandleChatInformationRequestEnum(jsonObject);
-                            //    break;
-                            case EnumHandler.CommunicationMessageID_Enum.ContactInformationRequest:
-                                HandleContactInformationRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.ChatInformationRequest:
-                                HandleChatInformationRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.GroupCreatorRequest:
-                                HandleGroupCreatorRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallRequest:
-                                HandleVideoCallRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallAcceptanceRequest:
-                                HandleVideoCallAcceptanceRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallDenialRequest:
-                                HandleVideoCallDenialRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallMuteRequest:
-                                HandleVideoCallMuteRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallUnmuteRequest:
-                                HandleVideoCallUnmuteRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOnRequest:
-                                HandleVideoCallCameraOnRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.VideoCallCameraOffRequest:
-                                HandleVideoCallCameraOffRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.EndVideoCallRequest:
-                                HandleEndVideoCallRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.MessageHistoryRequest:
-                                HandleMessageHistoryRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.AudioCallRequest:
-                                HandleAudioCallRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.AudioCallAcceptanceRequest:
-                                HandleAudioCallAcceptanceRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.AudioCallDenialRequest:
-                                HandleAudioCallDenialRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UdpAudioConnectionRequest:
-                                HandleUdpAudioConnectionRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UdpVideoConnectionRequest:
-                                HandleUdpVideoConnectionRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.EndAudioCallRequest:
-                                HandleEndAudioCallRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.DeleteMessageRequest:
-                                HandleDeleteMessageRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UpdateProfileStatusRequest:
-                                HandleUpdateProfileStatusRequestEnum(jsonObject);
-                                break;
-                            case EnumHandler.CommunicationMessageID_Enum.UpdateProfilePictureRequest:
-                                HandleUpdateProfilePictureRequestEnum(jsonObject);
-                                break;
-
-                        }
-                    }
-                    if (isClientConnected)
-                    {
-                        lock (_client.GetStream())
-                        {
-                            // continue reading from the client
-                            //_client.GetStream().BeginRead(data, 0, System.Convert.ToInt32(_client.ReceiveBufferSize), ReceiveMessage, null);
-                            _client.GetStream().BeginRead(data, 0, 4, ReceiveMessageLength, null);
-
+                            lock (_client.GetStream())
+                            {
+                                _client.GetStream().BeginRead(data, 0, 4, ReceiveMessageLength, null);
+                            }
                         }
                     }
                 }
@@ -2193,492 +2083,9 @@ namespace YouChatServer
                     //Broadcast(_ClientNick + " has left the chat.");
                 }
             }
-
         }//end R
 
-        /// <summary>
-        /// The ReceiveMessage method recieves and handles the incomming stream
-        /// </summary>
-        /// <param name="ar">IAsyncResult Interface</param>
-        //public void ReceiveMessage(IAsyncResult ar)
-        //    {
-        //        int bytesRead;
-        //        try
-        //        {
-        //            lock (_client.GetStream())
-        //            {
-        //                // call EndRead to handle the end of an async read.
-        //                bytesRead = _client.GetStream().EndRead(ar);
-        //            }
-        //            // if bytesread<1 -> the client disconnected
-        //            if (bytesRead < 1)
-        //            {
-        //                // remove the client from out list of clients
-        //                AllClients.Remove(_clientIP);
-        //                disconnectedClients.Enqueue(PlayerNum);
-        //                return;
-        //            }
-        //            else // client still connected
-        //            {
-        //                string messageReceived = System.Text.Encoding.ASCII.GetString(data, 0, bytesRead);
-        //                string[] messageToArray = messageReceived.Split('$');
-        //                int requestNumber = Convert.ToInt32(messageToArray[0]);
-        //                string messageDetails = messageToArray[1];
-        //                string DecryptedMessageDetails;
-        //                // if the client is sending send me datatable
-        //                if (requestNumber == EncryptionClientPublicKeySender)
-        //                {
-        //                    ClientPublicKey = messageDetails;
-        //                    SendMessage(EncryptionServerPublicKeyReciever, Rsa.GetPublicKey());
-        //                    //SendMessage(EncryptionServerPublicKeyReciever + "$" + Rsa.GetPublicKey());
-
-        //                    SymmetricKey = RandomStringCreator.RandomString(32);
-        //                    string EncryptedSymmerticKey = Rsa.Encrypt(SymmetricKey, ClientPublicKey);
-        //                    SendMessage(EncryptionSymmetricKeyReciever, EncryptedSymmerticKey);
-        //                    //SendMessage(EncryptionSymmetricKeyReciever + "$" + EncryptedSymmerticKey);
-
-        //                }
-        //                else
-        //                {
-        //                    DecryptedMessageDetails = Encryption.Encryption.DecryptData(SymmetricKey, messageDetails);
-        //                    if (requestNumber == registerRequest)
-        //                    {
-        //                        string[] data = DecryptedMessageDetails.Split('#');
-        //                        if (!UserDetails.DataHandler.usernameIsExist(data[0]) /*&& !UserDetails.DataHandler.EmailAddressIsExist(data[4])*/)
-        //                        {
-        //                            if (UserDetails.DataHandler.InsertUser(DecryptedMessageDetails) > 0)
-        //                            {
-        //                                _ClientNick = data[0];
-        //                                SendMessage(registerResponse, registerResponse1);
-        //                                //SendMessage(registerResponse + "$" + registerResponse1);
-
-        //                            }
-        //                            else//if regist not ok
-        //                            {
-        //                                SendMessage(registerResponse, registerResponse2);
-        //                                //SendMessage(registerResponse + "$" + registerResponse2);
-
-        //                            }
-        //                        }
-        //                        else//if regist not ok
-        //                        {
-        //                            SendMessage(registerResponse, registerResponse2);
-        //                            //SendMessage(registerResponse + "$" + registerResponse2);
-
-        //                        }
-        //                    }
-        //                    else if (requestNumber == loginRequest)
-        //                    {
-        //                        //string[] data = messageDetails.Split('#');
-        //                        string[] data = DecryptedMessageDetails.Split('#');
-
-        //                        //if ((UserDetails.DataHandler.isExist(messageDetails)) && (!UserIsConnected(data[0])))
-
-        //                        if ((UserDetails.DataHandler.isExist(DecryptedMessageDetails)) && (!UserIsConnected(data[0])))
-        //                        {
-        //                            _ClientNick = data[0];
-        //                            string emailAddress = UserDetails.DataHandler.GetEmailAddress(_ClientNick);
-        //                            if (emailAddress != "")
-        //                            {
-        //                                SendMessage(loginResponse, emailAddress);
-        //                                //SendMessage(loginResponse + "$" + emailAddress);
-
-        //                            }
-        //                            else
-        //                            {
-        //                                //todo - send a message saying there was a problem
-        //                            }
-        //                        }
-        //                        else
-        //                        {
-        //                            ClientAttemptsState clientAttemptsState;
-        //                            if (!_clientFailedAttempts.ContainsKey(_clientAddress))
-        //                            {
-        //                                clientAttemptsState = new ClientAttemptsState(this);
-        //                                _clientFailedAttempts[_clientAddress] = clientAttemptsState;
-        //                            }
-        //                            else
-        //                            {
-        //                                clientAttemptsState = _clientFailedAttempts[_clientAddress];
-        //                            }
-        //                            clientAttemptsState.HandleFailedAttempt();
-        //                            //if (_clientFailedAttempts.ContainsKey(_clientIP))
-        //                            //{
-        //                            //    _clientFailedAttempts[_clientIP]++;
-
-        //                            //}
-        //                            //else
-        //                            //{
-        //                            //    _clientFailedAttempts[_clientIP] = 1;
-
-        //                            //}
-        //                            //if (_clientFailedAttempts[_clientIP] > 5)
-        //                            //{
-        //                            //    //handle waiting..
-        //                            //    // todo - handle block of spamming user and maybe do the following act:
-        //                            //    //to send a message to the user saying his account got blocked for 10 minutes because someone tried to enter..
-        //                            //}
-        //                            SendMessage(loginResponse, loginResponse2);
-        //                            //SendMessage(loginResponse + "$" + loginResponse2);
-
-        //                        }
-        //                    }
-        //                    else if (requestNumber == sendMessageRequest)
-        //                    {
-        //                        string message = _ClientNick + "#" + DecryptedMessageDetails;
-        //                        Multicast(sendMessageResponse, message);
-        //                        //Broadcast(sendMessageResponse + "$" + message);
-
-        //                    }
-        //                    else if (requestNumber == ContactInformationRequest)
-        //                    {
-        //                        string ContactsInformation = "Dan" + "^" + "hi" + "^" + "07:50" + "^" + "Male3" + "#" + "Ben" + "^" + "how you doing" + "^" + "17:53" + "^" + "Female3 " + "#" + "Ron" + "^" + "YOO" + "^" + "03:43" + "^" + "Male4"; //בעתיד לקחת מידע מהdatabase
-        //                        SendMessage(ContactInformationResponse, ContactsInformation);
-        //                        //SendMessage(ContactInformationResponse + "$" + ContactsInformation);
-
-        //                    }
-        //                    else if ((requestNumber == UploadProfilePictureRequest))
-        //                    {
-        //                        if (UserDetails.DataHandler.InsertProfilePicture(_ClientNick, DecryptedMessageDetails) > 0)
-        //                        {
-        //                            SendMessage(UploadProfilePictureResponse, DecryptedMessageDetails);
-        //                            //SendMessage(UploadProfilePictureResponse + "$" + registerResponse1);
-
-        //                        }
-        //                    }
-        //                    else if ((requestNumber == UploadStatusRequest))
-        //                    {
-        //                        if (UserDetails.DataHandler.InsertStatus(_ClientNick, DecryptedMessageDetails) > 0)
-        //                        {
-        //                            SendMessage(UploadStatusResponse, DecryptedMessageDetails);
-        //                            //SendMessage(UploadStatusResponse + "$" + registerResponse1);
-
-        //                        }
-        //                    }
-        //                    else if (requestNumber == ResetPasswordRequest)
-        //                    {
-        //                        if (UserDetails.DataHandler.IsMatchingUsernameAndEmailAddressExist(DecryptedMessageDetails))
-        //                        {
-        //                            SendMessage(ResetPasswordResponse, ResetPasswordResponse1);
-        //                            //SendMessage(ResetPasswordResponse + "$" + ResetPasswordResponse1);
-
-        //                        }
-        //                        else
-        //                        {
-        //                            SendMessage(ResetPasswordResponse, ResetPasswordResponse2);
-        //                            //SendMessage(ResetPasswordResponse + "$" + ResetPasswordResponse2);
-
-        //                        }
-        //                    }
-        //                    else if ((requestNumber == PasswordRenewalMessageRequest) || (requestNumber == PasswordUpdateRequest))
-        //                    {
-        //                        bool IsPasswordRenewalMessageRequest = (requestNumber == PasswordRenewalMessageRequest);
-        //                        int identifierNumber; //maybe instead of handling both here i should write a method that get the idnumber and send the message accordinglly...
-        //                        bool HasAccessToChange = true;
-        //                        string[] data = DecryptedMessageDetails.Split('#');
-        //                        string username = data[0];
-        //                        string NewPassword = data[1];
-        //                        if (IsPasswordRenewalMessageRequest)
-        //                        {
-        //                            identifierNumber = PasswordRenewalMessageResponse;
-        //                        }
-        //                        else
-        //                        {
-        //                            identifierNumber = PasswordUpdateResponse;
-
-        //                        }
-        //                        if (!IsPasswordRenewalMessageRequest)
-        //                        {
-        //                            string OldPassword = data[2];
-        //                            if (!UserDetails.DataHandler.PasswordIsExist(username, OldPassword)) //means the password already been chosen once by the user...
-        //                            {
-        //                                HasAccessToChange = false;
-        //                                SendMessage(identifierNumber, PasswordMessageResponse4); //past password not matching..
-
-        //                            }
-        //                        }
-        //                        if (HasAccessToChange)
-        //                        {
-        //                            if (UserDetails.DataHandler.PasswordIsExist(username, NewPassword)) //means the password already been chosen once by the user...
-        //                            {
-        //                                SendMessage(identifierNumber, PasswordMessageResponse1);
-
-        //                            }
-        //                            else
-        //                            {
-        //                                if (UserDetails.DataHandler.CheckFullPasswordCapacity(username))
-        //                                {
-        //                                    UserDetails.DataHandler.AddColumnToUserPastPasswords();
-        //                                }
-        //                                if (UserDetails.DataHandler.SetNewPassword(username, NewPassword) > 0)
-        //                                {
-        //                                    SendMessage(identifierNumber, PasswordMessageResponse2);
-        //                                    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
-        //                                }
-        //                                else
-        //                                {
-        //                                    SendMessage(identifierNumber, PasswordMessageResponse3);
-        //                                    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
-
-        //                                }
-        //                            }
-        //                        }
-
-        //                    }
-        //                    else if (requestNumber == InitialProfileSettingsCheckRequest)
-        //                    {
-        //                        if (IsNeededToUpdatePassword()) //opens the user the change password mode, he changes the password and if it's possible it automatticly let him enter or he needs to login once again...
-        //                        {
-        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse1);
-
-        //                        }
-        //                        else if (!UserDetails.DataHandler.ProfilePictureIsExist(_ClientNick)) //todo - change this - after doing the captcha i should ask the server for this information
-        //                        {
-        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse2);
-        //                            //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse4);
-
-        //                        }
-        //                        else if (!UserDetails.DataHandler.StatusIsExist(_ClientNick))
-        //                        {
-        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse3);
-        //                            //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse5);
-        //                        }
-        //                        else
-        //                        {
-        //                            SendMessage(InitialProfileSettingsCheckResponse, InitialProfileSettingsCheckResponse4);
-        //                            //SendMessage(InitialProfileSettingsCheckResponse + "$" + loginResponse1);
-        //                            if (UserDetails.DataHandler.SetUserOnline(_ClientNick) > 0)
-        //                            {
-        //                                //was ok...
-        //                            }
-
-        //                        }
-        //                    }
-        //                    else if (requestNumber == UserDetailsRequest)
-        //                    {
-        //                        string UserInformation = UserDetails.DataHandler.GetUserProfileSettings(_ClientNick);
-        //                        SendMessage(UserDetailsResponse, UserInformation);
-        //                    }
-        //                    else if (requestNumber == FriendRequestSender) //todo - needs to check if the user already sent a friend request before..
-        //                    {
-        //                        string[] data = DecryptedMessageDetails.Split('#');
-        //                        string FriendRequestReceiverUsername = data[0];
-        //                        string FriendRequestSenderUsername = _ClientNick;
-
-        //                        if (FriendRequestSenderUsername != FriendRequestReceiverUsername)
-        //                        {
-        //                            if (UserDetails.DataHandler.IsMatchingUsernameAndTagLineIdExist(DecryptedMessageDetails))
-        //                            {
-        //                                //ask friend request..
-        //                                if (UserDetails.DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
-        //                                {
-        //                                    //was successful
-        //                                    //to check if he is online...
-        //                                    if (UserIsConnected(FriendRequestReceiverUsername))
-        //                                    {
-        //                                        string profilePicture = UserDetails.DataHandler.GetProfilePicture(FriendRequestSenderUsername);
-        //                                        if (profilePicture != "")
-        //                                        {
-        //                                            string userDetails = FriendRequestSenderUsername + "^" + profilePicture;
-        //                                            Unicast(FriendRequestReceiver, userDetails, FriendRequestReceiverUsername); //todo - need to handle in the client side how it will work
-        //                                                                                                                        //need to handle when logging in if there were message request sent before...
-        //                                        }
-
-        //                                    }
-        //                                }
-        //                                else
-        //                                {
-        //                                    //wasn't successful even though details were right - needs to inform the user and tell him to send once again...
-        //                                }
-
-        //                            }
-        //                        }
-
-        //                    }
-        //                    else if (requestNumber == FriendRequestResponseSender)
-        //                    {
-        //                        string[] data = DecryptedMessageDetails.Split('#'); //needs to string from the client the name of the user who sent and then the accept/deny...
-        //                        string FriendRequestSenderUsername = data[0];
-        //                        string FriendRequestReceiverUsername = _ClientNick;
-        //                        string FriendRequestStatus = data[1];
-        //                        if (UserDetails.DataHandler.HandleFriendRequestStatus(FriendRequestSenderUsername, FriendRequestReceiverUsername, FriendRequestStatus) > 0)
-        //                        {
-        //                            if (FriendRequestStatus == FriendRequestResponseSender1)
-        //                            {
-        //                                if ((UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestSenderUsername)) || (UserDetails.DataHandler.CheckFullFriendsCapacity(FriendRequestReceiverUsername)))
-        //                                {
-        //                                    UserDetails.DataHandler.AddColumnToFriends();
-        //                                }
-        //                                if (UserDetails.DataHandler.AddFriend(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0) //one worked...
-        //                                {
-        //                                    if (UserDetails.DataHandler.AddFriend(FriendRequestReceiverUsername, FriendRequestSenderUsername) > 0) //both worked...
-        //                                    {
-        //                                        Unicast(FriendRequestResponseReceiver, "the friend request has been accepted", FriendRequestSenderUsername);
-        //                                    }
-        //                                }
-        //                                //if (UserDetails.DataHandler.setne(username, password) > 0)
-        //                                //{
-        //                                //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse2);
-        //                                //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse2);
-        //                                //}
-        //                                //else
-        //                                //{
-        //                                //    SendMessage(PasswordRenewalMessageResponse, PasswordRenewalMessageResponse3);
-        //                                //    //SendMessage(PasswordRenewalMessageResponse + "$" + PasswordRenewalMessageResponse3);
-
-        //                                //}                                    //the user accepted the friend request and i should handle them being friends... both by entering to database and sending them message if they are connected so they will add one another in contacts..
-        //                            }
-        //                            else if (FriendRequestStatus == FriendRequestResponseSender2)
-        //                            {
-        //                                // doesn't really need to do something... maybe in the future i will think abt something
-        //                            }
-        //                        }
-        //                        else
-        //                        {
-        //                            //was an error...
-        //                        }
-
-        //                    }
-        //                    else if (requestNumber == FriendsProfileDetailsRequest)
-        //                    {
-        //                        //string FriendsName = UserDetails.DataHandler.GetFriendList(_ClientNick);
-        //                        //Dictionary<string, string> FriendsProfileDetailsDictionary = UserDetails.DataHandler.GetFriendsProfileInformation(FriendsName);
-        //                        ////here i check the need for split messages...
-        //                        //List<string> FriendsProfileDetails = new List<string>();
-        //                        //int AllFriendProfileDetailsLength = 0;
-        //                        //string FriendProfileDetails = "";
-        //                        //int index = 0;
-        //                        //foreach (KeyValuePair<string, string> kvp in FriendsProfileDetailsDictionary)
-        //                        //{
-        //                        //    FriendProfileDetails = "#" + kvp.Value;
-        //                        //    byte[] currentUserDetailsBytes = Encoding.UTF8.GetBytes(FriendProfileDetails);
-
-        //                        //    if (currentUserDetailsBytes.Length + AllFriendProfileDetailsLength + 4> 1500)      //needs to check if adding the content of the profiledetails will be two much length
-        //                        //    {
-        //                        //        index += 1;
-        //                        //        AllFriendProfileDetailsLength = 0;
-        //                        //    }
-        //                        //    FriendsProfileDetails[index] += FriendProfileDetails;
-        //                        //    AllFriendProfileDetailsLength += currentUserDetailsBytes.Length;
-        //                        //}
-        //                        //foreach (string FriendsProfileDetailsSet in FriendsProfileDetails)
-        //                        //{
-        //                        //    SendMessage(FriendsProfileDetailsResponse, FriendsProfileDetailsSet.Remove(0, 1)); //maybe i should split to couple of messages...
-        //                        //}
-        //                    }
-        //                    else if (requestNumber == disconnectRequest)
-        //                    {
-        //                        if (_ClientNick != null)
-        //                        {
-        //                            if (UserDetails.DataHandler.SetUserOffline(_ClientNick) > 0)
-        //                            {
-        //                                //was ok...
-        //                            }
-        //                        }
-        //                    }
-        //                    else if (requestNumber == PastFriendRequestsRequest)
-        //                    {
-        //                        string FriendRequestNamesOfSendersAndRequestDates = UserDetails.DataHandler.CheckFriendRequests(_ClientNick);
-        //                        string[] FriendRequestDetails = FriendRequestNamesOfSendersAndRequestDates.Split('#');
-        //                        string[] SplittedFriendRequestDetails;
-        //                        string name;
-        //                        string DetailsOfFriendRequestSenders = "";
-        //                        //for (int index = FriendRequestDetails.Length - 1; index >= 0; index--)
-        //                        //{
-        //                        //    SplittedFriendRequestDetails = FriendRequestDetails[index].Split('^');
-        //                        //    name = SplittedFriendRequestDetails[0];
-        //                        //    string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
-        //                        //    if (profilePicture != "")
-        //                        //    {
-        //                        //        DetailsOfFriendRequestSenders = FriendRequestDetails[index] + "^" + profilePicture + "#";
-        //                        //    }
-        //                        //}
-        //                        foreach (string friendRequestDetails in FriendRequestDetails)
-        //                        {
-        //                            SplittedFriendRequestDetails = friendRequestDetails.Split('^');
-        //                            name = SplittedFriendRequestDetails[0];
-        //                            string profilePicture = UserDetails.DataHandler.GetProfilePicture(name);
-        //                            if (profilePicture != "")
-        //                            {
-        //                                DetailsOfFriendRequestSenders += friendRequestDetails + "^" + profilePicture + "#";
-        //                            }
-        //                        }
-        //                        if (DetailsOfFriendRequestSenders.EndsWith("#"))
-        //                        {
-        //                            DetailsOfFriendRequestSenders = DetailsOfFriendRequestSenders.Substring(0, DetailsOfFriendRequestSenders.Length - 1);
-        //                        }
-        //                        SendMessage(PastFriendRequestsResponse, DetailsOfFriendRequestSenders);
-
-        //                    }
-        //                    else if (requestNumber == VideoCallRequest)
-        //                    {
-        //                        string friendName = DecryptedMessageDetails;
-        //                        if ((UserIsConnected(friendName)) && (DataHandler.StatusIsExist(friendName))) //to check if he is already in a call...
-        //                        {
-        //                            //establish a udp connection between them two and the server...
-        //                            string messageContent = VideoCallResponse2 + "#" + _ClientNick;
-        //                            Unicast(VideoCallResponse, messageContent, friendName); //what if he is currently in a call? will it work //todo - needs to check that in the future
-        //                        }
-        //                        else
-        //                        {
-        //                            SendMessage(VideoCallResponse, VideoCallResponse1);
-
-        //                        }
-        //                    }
-        //                    else if (requestNumber == VideoCallResponseSender)
-        //                    {
-        //                        string[] messageContent = DecryptedMessageDetails.Split('#');
-        //                        string messageInformation = messageContent[0];
-        //                        string friendName = messageContent[1];
-        //                        if (messageInformation == VideoCallResponseResult1)
-        //                        {
-        //                            Unicast(VideoCallResponseReciever, VideoCallResponseResult1, friendName);
-        //                            //needs to create the udp connection...
-
-        //                            //to do something like that:
-        //                            //Guid callId = Guid.NewGuid(); // Generate a unique identifier for the call
-        //                            //VideoCallMembers call = new VideoCallMembers(_clientIP,_clientAddress);
-
-        //                            //Program.VideoCalls[callId] = call;
-
-        //                        }
-        //                        else //the call wont happen...
-        //                        {
-        //                            Unicast(VideoCallResponseReciever, VideoCallResponseResult2, friendName);
-
-        //                        }
-        //                    }
-        //                    else if (requestNumber == GroupCreatorRequest)
-        //                    {
-        //                        ChatCreator newChat = JsonConvert.DeserializeObject<ChatCreator>(DecryptedMessageDetails);
-        //                        if (DataHandler.CreateGroupChat(newChat) > 0)
-        //                        {
-        //                            SendMessage(GroupCreatorResponse, "Group was successfully created");
-        //                            List<string> chatMembers = newChat._chatParticipants;
-        //                            chatMembers.RemoveAt(0);
-        //                            ChatMembersCast(GroupCreatorResponse, DecryptedMessageDetails, chatMembers);
-        //                            //needs to send this group creation to every logged user...
-        //                        }
-
-        //                    }
-        //                }
-
-
-
-        //            }
-        //            lock (_client.GetStream())
-        //            {
-        //                // continue reading from the client
-        //                _client.GetStream().BeginRead(data, 0, System.Convert.ToInt32(_client.ReceiveBufferSize), ReceiveMessage, null);
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            AllClients.Remove(_clientIP);
-        //            //Broadcast(_ClientNick + " has left the chat.");
-
-        //        }
-        //    }//end ReceiveMessage
+      
 
         /// <summary>
         /// The SendMessage method sends a message to the connected client
@@ -2782,59 +2189,58 @@ namespace YouChatServer
                 {
                     jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
                 }
-                string messageToSend = Encoding.UTF8.GetString(new byte[] { signal }) + jsonMessage;
-                Console.WriteLine(messageToSend);
-                Console.WriteLine(jsonMessage);
+                byte[] jsonMessageBytes = System.Text.Encoding.UTF8.GetBytes(jsonMessage);
 
-                // Send data to the client
-                byte[] totalBytesToSend = System.Text.Encoding.ASCII.GetBytes(messageToSend);
+                // Create a new byte array to hold the final message
+                byte[] totalBytesToSend = new byte[jsonMessageBytes.Length + 1];
+
+                // Copy the signal byte to the first position in the new array
+                totalBytesToSend[0] = signal;
+
+                // Copy the message bytes to the remaining positions in the new array
+                Array.Copy(jsonMessageBytes, 0, totalBytesToSend, 1, jsonMessageBytes.Length);
+
+                int bufferSize = _client.ReceiveBufferSize;
                 byte[] bytesToSend;
-
+                byte[] buffer;
+                byte[] length;
+                byte[] prefixedBuffer;
                 while (totalBytesToSend.Length > 0)
                 {
-                    if (totalBytesToSend.Length > System.Convert.ToInt32(_client.ReceiveBufferSize) - 8)
+                    if (totalBytesToSend.Length > bufferSize - 8)
                     {
-                        bytesToSend = new byte[System.Convert.ToInt32(_client.ReceiveBufferSize) - 8];
-                        Array.Copy(totalBytesToSend, 0, bytesToSend, 0, System.Convert.ToInt32(_client.ReceiveBufferSize) - 8); // to get a fixed size of the prefix to the message
-                        byte[] buffer = BitConverter.GetBytes(0); //indicates it's not the last message...
+                        bytesToSend = new byte[bufferSize - 8];
+                        Array.Copy(totalBytesToSend, 0, bytesToSend, 0, bufferSize - 8);
+                        buffer = BitConverter.GetBytes(0); //indicates it's not the last message.
+                    }
+                    else
+                    {
+                        bytesToSend = totalBytesToSend;
+                        buffer = BitConverter.GetBytes(1); //indicates it's the last message...
+                    }
 
-                        byte[] length = BitConverter.GetBytes(bytesToSend.Length + sizeof(int)); // the length of the message in byte array
-                        byte[] prefixedBuffer = new byte[bytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
+                    length = BitConverter.GetBytes(bytesToSend.Length + sizeof(int));  // the length of the message in byte array
+                    prefixedBuffer = new byte[bytesToSend.Length + (2 * sizeof(int))];
 
-                        Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
-                        Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
+                    Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int));
+                    Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int));
+                    Array.Copy(bytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), bytesToSend.Length);
 
-                        Array.Copy(bytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), bytesToSend.Length); // add the prefix to the message
+                    ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
+                    ns.Flush();
 
-                        // Actually send it
+                    if (totalBytesToSend.Length > bufferSize - 8)
+                    {
+                        byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(bufferSize) - 8)];
 
-                        ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
-                        ns.Flush();
-                        byte[] newTotalBytesToSend = new byte[totalBytesToSend.Length - (System.Convert.ToInt32(_client.ReceiveBufferSize) - 8)];
-
-                        Array.Copy(totalBytesToSend, System.Convert.ToInt32(_client.ReceiveBufferSize) - 8, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
+                        Array.Copy(totalBytesToSend, System.Convert.ToInt32(bufferSize) - 8, newTotalBytesToSend, 0, newTotalBytesToSend.Length); // to get a fixed size of the prefix to the message
                         totalBytesToSend = newTotalBytesToSend;
                     }
                     else
                     {
-                        byte[] buffer = BitConverter.GetBytes(1); //indicates it's the last message...
-
-                        byte[] length = BitConverter.GetBytes(totalBytesToSend.Length + sizeof(int)); // the length of the message in byte array
-                        byte[] prefixedBuffer = new byte[totalBytesToSend.Length + (2 * sizeof(int))]; // the maximum size of int number in bytes array
-
-                        Array.Copy(length, 0, prefixedBuffer, 0, sizeof(int)); // to get a fixed size of the prefix to the message
-                        Array.Copy(buffer, 0, prefixedBuffer, sizeof(int), sizeof(int)); // to get a fixed size of the prefix to the message
-
-                        Array.Copy(totalBytesToSend, 0, prefixedBuffer, (2 * sizeof(int)), totalBytesToSend.Length); // add the prefix to the message
-
-                        // Actually send it
-
-                        ns.Write(prefixedBuffer, 0, prefixedBuffer.Length);
-                        ns.Flush();
                         totalBytesToSend = new byte[0];
                     }
                 }
-
             }
             catch (Exception ex)
             {
@@ -2842,38 +2248,7 @@ namespace YouChatServer
             }
         }//end SendMessage
 
-        public void SendMessage(int messageId, string messageContent)
-        {
-            try
-            {
-                System.Net.Sockets.NetworkStream ns;
-                // we use lock to present multiple threads from using the networkstream object
-                // this is likely to occur when the server is connected to multiple clients all of 
-                // them trying to access to the networkstram at the same time.
-                lock (_client.GetStream())
-                {
-                    ns = _client.GetStream();
-                }
-                // Send data to the client
-                string message;
-                if ((messageId == EncryptionClientPublicKeySender) || (messageId == EncryptionSymmetricKeyReciever))
-                {
-                    message = messageId + "$" + messageContent;
-                }
-                else
-                {
-                    string EncryptedMessageContent = Encryption.Encryption.EncryptData(SymmetricKey, messageContent);
-                    message = messageId + "$" + EncryptedMessageContent;
-                }
-                byte[] bytesToSend = System.Text.Encoding.ASCII.GetBytes(message);
-                ns.Write(bytesToSend, 0, bytesToSend.Length);
-                ns.Flush();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-        }//end SendMessage
+      
         //public void SendMessage(string message)
         //{
         //    try
@@ -2896,43 +2271,6 @@ namespace YouChatServer
         //        Console.WriteLine(ex.ToString());
         //    }
         //}//end SendMessage
-
-
-        public bool IsNeededToUpdatePassword()
-        {
-            bool NeededToUpdatePassword = false;
-            DateTime LastPasswordUpdateDate = UserDetails.DataHandler.GetLastPasswordUpdateDate(_ClientNick);
-            DateTime CurrentDate = DateTime.Now;  // Replace with your actual end date
-            int MonthsDifference = CalculateMonthsDifference(LastPasswordUpdateDate, CurrentDate);
-            if (MonthsDifference >= 1)
-            {
-                NeededToUpdatePassword = true;
-            }
-            return NeededToUpdatePassword;
-        }
-
-        public static int CalculateMonthsDifference(DateTime StartDate, DateTime EndDate)
-        {
-            //if (StartDate >= EndDate)
-            //{
-            //    return 0;
-            //}
-            //int YearDifference = (EndDate.Year - StartDate.Year);
-            //int MonthDifference = (EndDate.Month - StartDate.Month);
-
-            //int monthsApart = 12 * YearDifference + MonthDifference;
-
-            //// Adjust for cases where the endDate's day is earlier than the startDate's day
-            //if (EndDate.Day < StartDate.Day)
-            //{
-            //    monthsApart--;
-            //}
-
-            //return monthsApart;
-            return 3;
-        }
-    
-
 
         /// <summary>
         /// The UserIsConnected method checks if a user with the given username is connected by searching for a matching username in the AllClients dictionary
@@ -2990,110 +2328,6 @@ namespace YouChatServer
                     return client._clientIPEndPoint;
             }
             return null;
-        }
-
-
-        /// <summary>
-        /// The Broadcast method sends the message to every client in the AllClients dictionary
-        /// </summary>
-        /// <param name="message">Represents the message the server is sending to every client</param>
-        public void Broadcast(int messageId, string messageContent)
-        {
-            foreach (DictionaryEntry c in AllClients)
-            {
-                ((Client)(c.Value)).SendMessage(messageId, messageContent);
-            }
-        }
-
-        public void Multicast(int messageId, string messageContent)
-        {
-            foreach (DictionaryEntry c in AllClients)
-            {
-                if (!((Client)(c.Value))._ClientNick.Equals(this._ClientNick))
-                {
-                    ((Client)(c.Value)).SendMessage(messageId, messageContent);
-                }
-            }
-        }
-        public void Unicast(int messageId, string messageContent, string UserID)
-        {
-            foreach (DictionaryEntry c in AllClients)
-            {
-                if (((Client)(c.Value))._ClientNick == UserID) //בעתיד להחליף clientnick במשתנה של userid
-                {
-                    ((Client)(c.Value)).SendMessage(messageId, messageContent);
-                }
-            }
-        }
-        public void ChatMembersCast(int messageId, string messageContent, List<string> chatMembers)
-        {
-            foreach (DictionaryEntry c in AllClients)
-            {
-                foreach (string ChatMamber in chatMembers)
-                {
-                    if (((Client)(c.Value))._ClientNick == ChatMamber)
-                    {
-                        ((Client)(c.Value)).SendMessage(messageId, messageContent);
-                    }
-                }
-            }
-        }
-        ///// <summary>
-        ///// The Broadcast method sends the message to every client in the AllClients dictionary
-        ///// </summary>
-        ///// <param name="message">Represents the message the server is sending to every client</param>
-        //public void Broadcast(string message)
-        //{
-        //    foreach (DictionaryEntry c in AllClients)
-        //    {
-        //        ((Client)(c.Value)).SendMessage(message);
-        //    }
-        //}
-
-        //public void Multicast(string message)
-        //{
-        //    foreach (DictionaryEntry c in AllClients)
-        //    {
-        //        if (!((Client)(c.Value))._ClientNick.Equals(this._ClientNick))
-        //        {
-        //            ((Client)(c.Value)).SendMessage(message);
-        //        }
-        //    }
-        //}
-        //public void Unicast(string message, string UserID)
-        //{
-        //    foreach (DictionaryEntry c in AllClients)
-        //    {
-        //        if (((Client)(c.Value))._ClientNick == UserID) //בעתיד להחליף clientnick במשתנה של userid
-        //        {
-        //            ((Client)(c.Value)).SendMessage(message);
-        //        }
-        //    }
-        //}
-
-        public string getCode()
-        {
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, 5).Select(s =>
-            s[random.Next(s.Length)]).ToArray());
-        }
-
-        private void ReceiveImageUDP()
-        {
-            UdpClient udpListener = new UdpClient(12345); // Use the same port as the client
-
-            while (true)
-            {
-                IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                byte[] imageData = udpListener.Receive(ref clientEndPoint);
-
-                // Convert bytes to image
-                using (MemoryStream ms = new MemoryStream(imageData))
-                {
-                    Image receivedImage = Image.FromStream(ms);
-                }
-            }
         }
 
     }

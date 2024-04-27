@@ -8,18 +8,40 @@ using System.Threading.Tasks;
 
 namespace YouChatServer.UdpHandler
 {
+    /// <summary>
+    /// The "AudioUdpHandler" class manages the UDP audio communication between clients.
+    /// </summary>
     internal class AudioUdpHandler
     {
-        private static UdpClient AudioUdpClient;//udp audio listener object
+        /// <summary>
+        /// The UDP client for audio communication.
+        /// </summary>
+        private static UdpClient AudioUdpClient;
+
+        /// <summary>
+        /// The dictionary of client endpoints and their corresponding friend endpoints.
+        /// </summary>
         public static Dictionary<IPEndPoint, IPEndPoint> EndPoints = new Dictionary<IPEndPoint, IPEndPoint>();
+
+        /// <summary>
+        /// The dictionary of client endpoints and their corresponding encryption keys.
+        /// </summary>
         public static Dictionary<IPEndPoint, string> clientKeys = new Dictionary<IPEndPoint, string>();
 
+        /// <summary>
+        /// The "StartAudioUdpClient" method starts the UDP client for audio communication on port 11000.
+        /// </summary>
         public static void StartAudioUdpClient()
         {
             AudioUdpClient = new UdpClient(11000);//udp listens to port 11000
             AudioUdpClient.BeginReceive(new AsyncCallback(ReceiveAudioUdpMessage), null);
         }
 
+
+        /// <summary>
+        /// The "ReceiveAudioUdpMessage" Callback method for receiving audio UDP messages.
+        /// </summary>
+        /// <param name="ar">The asynchronous result.</param>
         static private void ReceiveAudioUdpMessage(IAsyncResult ar)
         {
             while (true)

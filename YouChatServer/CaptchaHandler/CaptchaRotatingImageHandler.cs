@@ -23,14 +23,7 @@ namespace YouChatServer.CaptchaHandler
         {
             SetPictureOrderForCaptcha();
         }
-        public int GetScore()
-        { 
-            return CaptchaPicturesScore;
-        }
-        public int GetAttempts()
-        {
-            return CaptchaPictureAttempts;
-        }
+
         public CaptchaRotationImages GetCaptchaRotationImages()
         {
             if (NumbersForCaptchaPictures.Count == 0)
@@ -50,6 +43,37 @@ namespace YouChatServer.CaptchaHandler
             CaptchaRotationImages captchaRotationImages = new CaptchaRotationImages(captchaImageContent, captchaCircularImageContent);
             return captchaRotationImages;
         }
+
+        private void RotateBothPictureBoxsRandomlly(ref Image captchaCircularImage, ref Image captchaImage)
+        {
+            CaptchaPictureAttempts++;
+            Random random = new Random();
+            captchaFlippedImageAngle = random.Next(1, 4) * 90;
+            do
+            {
+                captchaRotatedImageAngle = random.Next(360);
+            }
+            while (Math.Abs(captchaFlippedImageAngle - captchaRotatedImageAngle) <= 25);
+            Bitmap CaptchaPictureBoxRotatedImage = new Bitmap(captchaImage.Width, captchaImage.Height);
+            Bitmap CaptchaCircularPictureBoxAngleRotatedImage = new Bitmap(captchaCircularImage.Width, captchaCircularImage.Height);
+            Image originalImage = CaptchaRotatingImageList.CaptchaViewImageList.Images[CurrentPictureIndex];
+            RotateImage(ref CaptchaPictureBoxRotatedImage, originalImage, (float)captchaFlippedImageAngle);
+            RotateImage(ref CaptchaCircularPictureBoxAngleRotatedImage, originalImage, (float)captchaRotatedImageAngle);
+
+            captchaImage = CaptchaPictureBoxRotatedImage;
+            captchaCircularImage = CaptchaCircularPictureBoxAngleRotatedImage;
+        }
+        private void RotateImage(ref Bitmap rotatedImage, Image originalImage, float angle)
+        {
+            using (Graphics graphics = Graphics.FromImage(rotatedImage))
+            {
+                graphics.TranslateTransform(rotatedImage.Width / 2, rotatedImage.Height / 2);
+                graphics.RotateTransform(angle);
+                graphics.TranslateTransform(-rotatedImage.Width / 2, -rotatedImage.Height / 2);
+                graphics.DrawImage(originalImage, new PointF(0, 0));
+            }
+        }
+
         public void CheckAngle(double captchaRotatedImageAngle)
         {
 
@@ -77,11 +101,19 @@ namespace YouChatServer.CaptchaHandler
             {
                 CaptchaPictureAttempts = 0;
                 CaptchaPicturesScore = 0;
-                //start ban...
                 return false;
             }
             return true;
         }
+        public int GetScore()
+        {
+            return CaptchaPicturesScore;
+        }
+        public int GetAttempts()
+        {
+            return CaptchaPictureAttempts;
+        }
+
         private void SetPictureOrderForCaptcha()
         {
             NumbersForCaptchaPictures = new Queue<int>();
@@ -89,7 +121,6 @@ namespace YouChatServer.CaptchaHandler
             SetNumbersList();
             SetNumberForCaptchaPicturesQueue();
         }
-
 
         private void SetNumbersList()
         {
@@ -106,40 +137,6 @@ namespace YouChatServer.CaptchaHandler
                 NumbersForCaptchaPictures.Enqueue(NumbersList[Index]);
                 NumbersList.RemoveAt(Index);
             }
-        }
-
-        private void RotateBothPictureBoxsRandomlly(ref Image captchaCircularImage, ref Image captchaImage)
-        {
-            CaptchaPictureAttempts++;
-            Random random = new Random();
-            captchaFlippedImageAngle = random.Next(1, 4) * 90;
-            do
-            {
-                captchaRotatedImageAngle = random.Next(360);
-            }
-            while (Math.Abs(captchaFlippedImageAngle - captchaRotatedImageAngle) <= 25);
-
-
-            Bitmap CaptchaPictureBoxRotatedImage = new Bitmap(captchaImage.Width, captchaImage.Height);
-            Bitmap CaptchaCircularPictureBoxAngleRotatedImage = new Bitmap(captchaCircularImage.Width, captchaCircularImage.Height);
-
-            using (Graphics graphics = Graphics.FromImage(CaptchaPictureBoxRotatedImage))
-            {
-                graphics.TranslateTransform(CaptchaPictureBoxRotatedImage.Width / 2, CaptchaPictureBoxRotatedImage.Height / 2);
-                graphics.RotateTransform((float)captchaFlippedImageAngle);
-                graphics.TranslateTransform(-CaptchaPictureBoxRotatedImage.Width / 2, -CaptchaPictureBoxRotatedImage.Height / 2);
-                graphics.DrawImage(CaptchaRotatingImageList.CaptchaViewImageList.Images[CurrentPictureIndex], new PointF(0, 0));
-            }
-
-            using (Graphics graphics = Graphics.FromImage(CaptchaCircularPictureBoxAngleRotatedImage))
-            {
-                graphics.TranslateTransform(CaptchaCircularPictureBoxAngleRotatedImage.Width / 2, CaptchaCircularPictureBoxAngleRotatedImage.Height / 2);
-                graphics.RotateTransform((float)captchaRotatedImageAngle);
-                graphics.TranslateTransform(-CaptchaCircularPictureBoxAngleRotatedImage.Width / 2, -CaptchaCircularPictureBoxAngleRotatedImage.Height / 2);
-                graphics.DrawImage(CaptchaRotatingImageList.CaptchaViewImageList.Images[CurrentPictureIndex], new PointF(0, 0));
-            }
-            captchaImage = CaptchaPictureBoxRotatedImage;
-            captchaCircularImage = CaptchaCircularPictureBoxAngleRotatedImage;
         }
     }
 }

@@ -8,10 +8,24 @@ using YouChatServer.Properties;
 
 namespace YouChatServer.CaptchaHandler
 {
+    /// <summary>
+    /// The "CaptchaCodeHandler" class manages captcha bitmap code generation and comparison.
+    /// </summary>
     internal class CaptchaCodeHandler 
     {
+        /// <summary>
+        /// The string object "code" stores the generated CAPTCHA code.
+        /// </summary>
         private string code;
+
+        /// <summary>
+        /// The List of Image objects "captchaBackground" stores the background images used for generating CAPTCHA.
+        /// </summary>
         private static List<Image> captchaBackground;
+
+        /// <summary>
+        /// The "CaptchaCodeHandler" constructor initializes a new instance of the <see cref="CaptchaCodeHandler"/> class by initializes the list of captcha backgrounds.
+        /// </summary>
         public CaptchaCodeHandler()
         {
             captchaBackground = new List<Image>
@@ -22,33 +36,32 @@ namespace YouChatServer.CaptchaHandler
             Properties.CaptchaBackground.CaptchaBackground4
             };
         }
-    
 
-        public string Code
-        {
-            get { return code; }
-        }
+        /// <summary>
+        /// The CompareCode method compares the provided code with the generated code.
+        /// </summary>
+        /// <param name="receivedCode">The code to compare.</param>
+        /// <returns>True if the codes match, false otherwise.</returns>
         public bool CompareCode(string recievedCode)
         {
             return (recievedCode == code);
         }
+
+        /// <summary>
+        /// The "CreateCatpchaBitmap" method generates a new CAPTCHA code and bitmap image.
+        /// </summary>
+        /// <returns>The generated bitmap image containing the CAPTCHA code.</returns>
         public Image CreateCatpchaBitmap()
         {
             code = RandomStringCreator.RandomString(8,true);
-            // Create an empty bitmap with a specified width and height
-            int width = 200; // Replace with your desired width
-            int height = 50; // Replace with your desired height
+
+            int width = 200;
+            int height = 50;
             Bitmap bitmap = new Bitmap(width, height);
             using (Graphics graphics = Graphics.FromImage(bitmap))
             {
-                // Draw an image on the bitmap
-                // Create a Random object
                 Random random = new Random();
-
-                // Get a random index within the range of the list
                 int randomIndex = random.Next(0, captchaBackground.Count);
-
-                // Get the random image
                 Image randomImage = captchaBackground[randomIndex];
                 try
                 {
@@ -56,12 +69,10 @@ namespace YouChatServer.CaptchaHandler
                 }
                 catch (ArgumentException ex)
                 {
-                    // Handle the exception or print a message
                     Console.WriteLine($"ArgumentException: {ex.Message}");
                     Console.WriteLine(randomIndex);
 
                 }
-                // Draw text on the bitmap
                 string text = code;
                 Font font = new Font("Lucida Handwriting", 18, FontStyle.Bold);
                 SolidBrush brush = new SolidBrush(Color.Black);
@@ -71,18 +82,10 @@ namespace YouChatServer.CaptchaHandler
                 PointF textLocation = new PointF(x, y);
                 graphics.DrawString(text, font, brush, textLocation);
 
-                // Dispose of resources
                 font.Dispose();
                 brush.Dispose();
             }
             return bitmap;
-
-            //create code
-            //save code
-            //create bitmap
-            //send bitmap
-
-            //than compare code
         }
     }
 }

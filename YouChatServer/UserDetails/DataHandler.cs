@@ -681,47 +681,6 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        private static string CreateSqlCommandTextForUserPastPasswordsInserting(string Username, string Md5Password)
-        {
-            string Sql = "INSERT INTO UserPastPasswords (Username, [Password-1]) VALUES('" + Username + "','" + Md5Password; //maybe i dont need this if i set it to nullable so i dont need to insert a value...
-            string TableName = "UserPastPasswords";
-            int ColumnNumber = NumberOfColumns(TableName);
-            for (int i = 3; i < ColumnNumber; i++)
-            {
-                Sql += "','" + null;
-            }
-            Sql += "')";
-            return Sql;
-        }
-
-        //public static int InsertUser(string userdetails)
-        //{
-        //    try
-        //    {
-        //        string[] data = userdetails.Split('#');
-        //        string[] dateData = data[6].Split('/');
-        //        int year = Convert.ToInt32(dateData[2]);
-        //        int month = Convert.ToInt32(dateData[1]);
-        //        int day = Convert.ToInt32(dateData[0]);
-        //        string dateFormat = "yyyy-MM-dd";
-        //        string DateInCurrectOrder = dateData[0] + "-" + dateData[1] + "-" + dateData[2];
-        //        DateTime birthDate = DateTime.ParseExact(DateInCurrectOrder, dateFormat, CultureInfo.InvariantCulture);
-        //        DateTime date = new DateTime(year, month, day);
-        //        cmd.Connection = connection;
-        //        string sql = "INSERT INTO UserDetails VALUES('" + data[0] + "','" + data[1] + "','" + data[2] + "','" + data[3] + "','" + data[4] + "','" + data[5] + "','" + birthDate + "','" + data[7] + "')";
-        //        cmd.CommandText = sql;
-        //        connection.Open();
-        //        int x = cmd.ExecuteNonQuery();
-        //        connection.Close();
-        //        return x;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show(ex.ToString());
-        //        Console.WriteLine(ex.Message);
-        //        return 0;
-        //    }
-        //}
 
         /// <summary>
         /// The isExist method checks if a user with the provided username and password exists in the UsersDetails table of the database
@@ -866,50 +825,7 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        //public static string CheckFriendRequests(string username)
-        //{
-        //    StringBuilder FriendRequestSenderUsernames = new StringBuilder();
-        //    string Usernames = ""; //will return "" if there are no friendrequest so i need to check if this value's length is bigger than 0
-        //    // if true i need to send the user a message and then he will add those friend requests to his friend request area...
-        //    try
-        //    {
-        //        cmd.Connection = connection;
-        //        //string Sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = '" + username + "' And RequestStatus = 'Pending'";
-        //        string sql = "SELECT SenderUsername, RequestDate FROM FriendRequest WHERE ReceiverUsername = @Username AND RequestStatus = 'Pending'";
-        //        cmd.CommandText = sql;
-        //        cmd.Parameters.Clear(); // Clear previous parameters
-        //        cmd.Parameters.AddWithValue("@Username", username);
-        //        connection.Open();
-        //        SqlDataReader Reader = cmd.ExecuteReader();
-        //        DateTime requestDate = DateTime.Now;
-        //        while (Reader.Read())
-        //        {
-        //            FriendRequestSenderUsernames.Append(Reader["SenderUsername"].ToString());
-        //            FriendRequestSenderUsernames.Append("^");
-        //            requestDate = Convert.ToDateTime(Reader["RequestDate"]); //maybe to create a list or dictonary..
-        //            FriendRequestSenderUsernames.Append(requestDate.ToString());
-
-
-        //            FriendRequestSenderUsernames.Append("#");
-
-        //        }
-        //        if (FriendRequestSenderUsernames.Length > 0)
-        //        {
-        //            FriendRequestSenderUsernames.Length -= 1;
-        //        }
-
-        //        Reader.Close();
-        //        connection.Close();
-        //        username = FriendRequestSenderUsernames.ToString();
-        //        return username;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show(ex.ToString());
-        //        Console.WriteLine(ex.Message);
-        //        return Usernames;
-        //    }
-        //}
+      
         public static DateTime GetFriendRequestDate(string SenderUsername, string ReceiverUsername, DateTime currentTime)
         {
             DateTime RequestDate = currentTime;
@@ -1022,34 +938,7 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        //public static int AddFriend(string UsernameAdding, string UsernameAdded)
-        //{
-        //    //needs to change the passwordupdate date and password values in the main table
-        //    // needs to change the password to the pastPasswords table
-        //    try
-        //    {
-        //        string FriendColumn = GetFriendColumnToInsert(UsernameAdding);
-        //        cmd.Connection = connection;
-        //        //string sql = "UPDATE Friends SET [" + FriendColumn + "] = '" + UsernameAdded + "' WHERE Username = '" + UsernameAdding + "'";
-        //        string sql = "UPDATE Friends SET [" + FriendColumn + "] = @UsernameAdded WHERE Username = @UsernameAdding";
-        //        cmd.CommandText = sql;
-        //        cmd.Parameters.Clear(); // Clear previous parameters
-        //        cmd.Parameters.AddWithValue("@UsernameAdded", UsernameAdded);
-        //        cmd.Parameters.AddWithValue("@UsernameAdding", UsernameAdding);
-        //        connection.Open();
-        //        int x = cmd.ExecuteNonQuery();
-
-        //        connection.Close();
-        //        //for the pastpasswords table i need to fine the last null value and replace it with a value
-        //        return x;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MessageBox.Show(ex.ToString());
-        //        Console.WriteLine(ex.Message);
-        //        return 0;
-        //    }
-        //}
+    
         public static int AddFriend(string UsernameAdding, string UsernameAdded, SqlTransaction transaction)
         {
             try
@@ -1201,15 +1090,6 @@ namespace YouChatServer.UserDetails
             List<ContactDetails> contactList = new List<ContactDetails>();
             try
             {
-                //string[] FriendName = Friends.Split('#');
-
-                //Dictionary<string, string> FriendsProfileDetails = new Dictionary<string, string>();
-
-                //foreach (string usernameToSearch in FriendName)
-                //{
-                //    FriendsProfileDetails[usernameToSearch] = GetFriendProfileInformation(usernameToSearch);
-                //}
-                //return FriendsProfileDetails;
                 ContactDetails contact;
                 foreach (string friendName in FriendNames)
                 {
@@ -1623,38 +1503,6 @@ namespace YouChatServer.UserDetails
                 }
             }
         }
-        public static int UpdateChatSettings(string Username, byte TextSizeProperty, short MessageGapProperty, bool EnterKeyPressedProperty)
-        {
-            try
-            {
-                cmd.Connection = connection;
-                //string sql = "UPDATE UserDetails SET ProfileStatus = '" + Status + "' WHERE Username = '" + Username + "'";
-                string sql = "UPDATE UserDetails SET TextSizeProperty = @TextSizeProperty, MessageGapProperty = @MessageGapProperty, EnterKeyPressedProperty = @EnterKeyPressedProperty WHERE Username = @Username";
-                cmd.CommandText = sql;
-                cmd.Parameters.Clear(); // Clear previous parameters
-                cmd.Parameters.AddWithValue("@TextSizeProperty", TextSizeProperty);
-                cmd.Parameters.AddWithValue("@MessageGapProperty", MessageGapProperty);
-                cmd.Parameters.AddWithValue("@EnterKeyPressedProperty", EnterKeyPressedProperty);
-                cmd.Parameters.AddWithValue("@Username", Username);
-                connection.Open();
-                int x = cmd.ExecuteNonQuery();
-                connection.Close();
-                return x;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.ToString());
-                Console.WriteLine(ex.Message);
-                return 0;
-            }
-            finally
-            {
-                if (connection.State != ConnectionState.Closed)
-                {
-                    connection.Close();
-                }
-            }
-        }
         public static bool StatusIsExist(string Username)//should be asked in the login part if the profilepictureisexist returns true...
         {
             try
@@ -1806,20 +1654,13 @@ namespace YouChatServer.UserDetails
             {
                 cmd.Connection = connection;
                 //string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId FROM UserDetails WHERE Username = '" + Username + "'";
-                string sql = "SELECT ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId FROM UserDetails WHERE Username = @Username";
+                string sql = "SELECT ProfilePicture, ProfileStatus, TagLineId FROM UserDetails WHERE Username = @Username";
                 cmd.CommandText = sql;
                 cmd.Parameters.Clear();
                 cmd.Parameters.AddWithValue("@Username", Username);
                 connection.Open();
                 string ProfilePicture = "";
-                string ProfileStatus = "";
-                bool LastSeenProperty = true;
-                bool OnlineProperty = true;
-                bool ProfilePictureProperty = true;
-                bool StatusProperty = true;
-                int TextSizeProperty = 2;
-                int MessageGapProperty = 10;
-                bool EnterKeyPressedProperty = false;
+                string ProfileStatus = "";         
                 string TagLineId = "";
                 Reader = cmd.ExecuteReader();
                 while (Reader.Read())
@@ -1827,19 +1668,11 @@ namespace YouChatServer.UserDetails
                     // Access the specific columns you selected
                     ProfilePicture = Reader.GetString(0); //needs to change the profilepicture in database from image to string...
                     ProfileStatus = Reader.GetString(1);
-                    LastSeenProperty = Reader.GetBoolean(2);
-                    OnlineProperty = Reader.GetBoolean(3);
-                    ProfilePictureProperty = Reader.GetBoolean(4);
-                    StatusProperty = Reader.GetBoolean(5);
-                    TextSizeProperty = Reader.GetByte(6);
-                    MessageGapProperty = Reader.GetInt16(7);
-                    EnterKeyPressedProperty = Reader.GetBoolean(8);
-                    TagLineId = Reader.GetString(9);
-
+                    TagLineId = Reader.GetString(2);
                 }
                 Reader.Close();
                 connection.Close();
-                JsonClasses.UserDetails userDetails = new JsonClasses.UserDetails(Username, ProfilePicture, ProfileStatus, LastSeenProperty, OnlineProperty, ProfilePictureProperty, StatusProperty, TextSizeProperty, MessageGapProperty, EnterKeyPressedProperty, TagLineId);
+                JsonClasses.UserDetails userDetails = new JsonClasses.UserDetails(Username, ProfilePicture, ProfileStatus, TagLineId);
                 return userDetails;
             }
             catch (Exception ex)
@@ -2302,25 +2135,26 @@ namespace YouChatServer.UserDetails
                     {
                         ChatNumberValueAsString = "0";
                     }
-
+                    sql = "ALTER TABLE " + tableName + " ADD [" + NewColumnName + "] NVARCHAR(50) NULL";
                     if (int.TryParse(ChatNumberValueAsString, out columnNumber))
                     {
                         switch (tableName)
                         {
                             case "UserPastPasswords":
                                 NewColumnName = $"Password-{columnNumber + 1}";
+                                sql = "ALTER TABLE " + tableName + " ADD [" + NewColumnName + "] NVARCHAR(50) NULL";
                                 break;
                             case "Friends":
                                 NewColumnName = $"Friend-{columnNumber + 1}";
+                                sql = "ALTER TABLE " + tableName + " ADD [" + NewColumnName + "] NVARCHAR(30) NULL";
                                 break;
                             case "GroupChats":
                                 NewColumnName = $"ChatParticipant-{columnNumber + 1}";
+                                sql = "ALTER TABLE " + tableName + " ADD [" + NewColumnName + "] NVARCHAR(30) NULL";
                                 break;
                                 // Add cases for other tables here if needed
                         }
                     }
-                    sql = "ALTER TABLE " + tableName + " ADD [" + NewColumnName + "] NVARCHAR(50) NULL";
-
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                     DataTable schemaTable = connection.GetSchema("Columns", new string[] { null, null, tableName, null });

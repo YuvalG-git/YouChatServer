@@ -67,7 +67,6 @@
     <Compile Include="CaptchaHandler\CaptchaCodeHandler.cs" />
     <Compile Include="CaptchaHandler\CaptchaRotatingImageHandler.cs" />
     <Compile Include="CaptchaHandler\CaptchaRotatingImageList.cs" />
-    <Compile Include="Chat.cs" />
     <Compile Include="ChatHandler\ChatDetails.cs" />
     <Compile Include="ChatHandler\ChatCreator.cs" />
     <Compile Include="ChatHandler\ChatHandler.cs" />
@@ -76,14 +75,11 @@
     <Compile Include="ChatHandler\Chats.cs" />
     <Compile Include="ChatHandler\DirectChatDetails.cs" />
     <Compile Include="ChatHandler\GroupChatDetails.cs" />
-    <Compile Include="ChatHistoryHandler.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientAttemptsState.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientAttemptsStateBase.cs" />
     <Compile Include="ClientAttemptsStateHandler\ClientCaptchaRotationImagesAttemptsState.cs" />
     <Compile Include="ClientAttemptsStateHandler\ServerConnectAttemptCounter.cs" />
-    <Compile Include="ClientCaptchaRotationImagesAttemptsState2.cs" />
-    <Compile Include="ClientAttemptsState2.cs" />
     <Compile Include="ContactHandler\ContactDetails.cs" />
     <Compile Include="ContactHandler\Contacts.cs" />
     <Compile Include="ConvertHandler.cs" />
@@ -129,8 +125,8 @@
     <Compile Include="JsonClasses\PersonalVerificationAnswers.cs" />
     <Compile Include="JsonClasses\RegistrationInformation.cs" />
     <Compile Include="Logger\Logger.cs" />
-    <Compile Include="Message.cs" />
     <Compile Include="PasswordRenewalOptions.cs" />
+    <Compile Include="PasswordUpdate.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\CaptchaBackground.Designer.cs">
