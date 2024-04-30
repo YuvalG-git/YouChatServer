@@ -11,25 +11,31 @@ namespace YouChatServer.Encryption
     /// </summary>
     internal class MD5
     {
+        #region Public Static Methods
+
         /// <summary>
         /// The "CreateMD5Hash" method calculates the MD5 hash from the input string.
         /// </summary>
         /// <param name="input">The input string to be hashed.</param>
         /// <returns>The MD5 hash of the input string.</returns>
-        public static string CreateMD5Hash(string input)//crypts passwords
+        /// <remarks>
+        /// This method calculates the MD5 hash from the input string and returns it as a hexadecimal string.
+        /// MD5 is a widely used cryptographic hash function that produces a 128-bit hash value.
+        /// </remarks>
+        public static string CreateMD5Hash(string input)
         {
-            // Step 1, calculate MD5 hash from input
             System.Security.Cryptography.MD5 md5 = System.Security.Cryptography.MD5.Create();
             byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(input);
             byte[] hashBytes = md5.ComputeHash(inputBytes);
             
-            // Step 2, convert byte array to hex string
-            StringBuilder sb = new StringBuilder();
+            StringBuilder stringBuilder = new StringBuilder();
             for (int i = 0; i < hashBytes.Length; i++)
             {
-                sb.Append(hashBytes[i].ToString("X2"));
+                stringBuilder.Append(hashBytes[i].ToString("X2"));
             }
-            return sb.ToString();
+            return stringBuilder.ToString();
         }
+        
+        #endregion
     }
 }

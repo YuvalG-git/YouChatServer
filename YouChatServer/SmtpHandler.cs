@@ -16,10 +16,26 @@ namespace YouChatServer
     /// </summary>
     public class SmtpHandler
     {
+        #region Private Fields
+
         /// <summary>
-        /// The SmtpClient object represents an SMTP client used for sending emails.
+        /// The SmtpClient object "_smtpClient" represents an SMTP client used for sending emails.
         /// </summary>
-        private SmtpClient SmtpClient;
+        private SmtpClient _smtpClient;
+
+        /// <summary>
+        /// The string object "SmtpCode" stores the current SMTP verification code.
+        /// </summary>
+        private string SmtpCode;
+
+        /// <summary>
+        /// The array of strings "EmailBodyContent" stores different email body content.
+        /// </summary>
+        private string[] EmailBodyContent;
+
+        #endregion
+
+        #region Private Readonly Fields
 
         /// <summary>
         /// The string object "Server" represents the SMTP server address.
@@ -30,11 +46,6 @@ namespace YouChatServer
         /// The int object "Port" represents the SMTP server port number.
         /// </summary>
         private readonly int Port = 587;
-
-        /// <summary>
-        /// The string object "SmtpCode" stores the current SMTP verification code.
-        /// </summary>
-        private string SmtpCode;
 
         /// <summary>
         /// The string object "YouChatSmtpPassword" represents the password for the YouChat SMTP account.
@@ -81,33 +92,45 @@ namespace YouChatServer
         /// </summary>
         private readonly string FriendRequestMessage = "<p style='color: #008080; font-size: 16px; direction: ltr;'>Check YouChat!</p>";
 
-        /// <summary>
-        /// The array of strings "EmailBodyContent" stores different email body content.
-        /// </summary>
-        private string[] EmailBodyContent;
+        #endregion
+
+        #region Constructors
 
         /// <summary>
-        /// The method initializes a new instance of the <see cref="SmtpHandler"/> class with SMTP server settings and email message parts.
+        /// The "SmtpHandler" constructor initializes a new instance of the <see cref="SmtpHandler"/> class with SMTP server settings and email message parts.
         /// </summary>
+        /// <remarks>
+        /// The constructor sets up the SMTP client with the server, port, and credentials.
+        /// It also initializes the <see cref="EmailBodyContent"/> array with three predefined email message parts for registration, login, and password renewal.
+        /// </remarks>
         public SmtpHandler()
         {
-            SmtpClient = new SmtpClient(Server, Port);
-            SmtpClient.UseDefaultCredentials = false;
-            SmtpClient.EnableSsl = true;
-            SmtpClient.Credentials = new NetworkCredential(YouChatSmtpSourceEmail, YouChatSmtpPassword);
+            _smtpClient = new SmtpClient(Server, Port);
+            _smtpClient.UseDefaultCredentials = false;
+            _smtpClient.EnableSsl = true;
+            _smtpClient.Credentials = new NetworkCredential(YouChatSmtpSourceEmail, YouChatSmtpPassword);
             EmailBodyContent = new string[3];
             EmailBodyContent[0] = RegistrationMessagePart1 + RegistrationMessagePart2;
             EmailBodyContent[1] = LoginMessagePart1 + LoginMessagePart2;
             EmailBodyContent[2] = PasswordRenewalMessagePart1 + PasswordRenewalMessagePart2;
         }
 
+        #endregion
+
+        #region Private Methods
 
         /// <summary>
         /// The "SendEmail" method sends an email using SMTP to the specified destination email address.
         /// </summary>
-        /// <param name="DestinationEmail">The email address of the recipient.</param>
+        /// <param name="destinationEmail">The email address of the recipient.</param>
         /// <param name="subject">The subject of the email.</param>
         /// <param name="body">The body of the email.</param>
+        /// <remarks>
+        /// This method sends an email message to the specified recipient using the SMTP client configured in the application. 
+        /// It sets the email's subject, body, and format (HTML or plain text) based on the provided parameters. 
+        /// If the email fails to send due to an SMTP exception or another general exception, 
+        /// the method writes an error message to the console.
+        /// </remarks>
         private void SendEmail(string DestinationEmail, string subject, string body)
         {
             using (MailMessage mail = new MailMessage(YouChatSmtpSourceEmail, DestinationEmail))
@@ -117,7 +140,7 @@ namespace YouChatServer
                 mail.IsBodyHtml = true;
                 try
                 {
-                    SmtpClient.Send(mail);
+                    _smtpClient.Send(mail);
                     Console.WriteLine("Email sent successfully.");
                 }
                 catch (SmtpException smtpEx)
@@ -137,12 +160,16 @@ namespace YouChatServer
             }
         }
 
-        /// <summary>
-        /// The "BuildEmailBody" method builds the HTML email body with the specified username and content.
+        /// The "BuildEmailBody" method builds the body of an HTML email message with the specified username and content.
         /// </summary>
-        /// <param name="UsernameId">The username to include in the email body.</param>
-        /// <param name="content">The content to include in the email body.</param>
-        /// <returns>The complete HTML email body.</returns>
+        /// <param name="UsernameId">The username or recipient's name to include in the greeting.</param>
+        /// <param name="content">The main content of the email message.</param>
+        /// <returns>The HTML body of the email message, including the greeting and content.</returns>
+        /// <remarks>
+        /// This method constructs the body of an HTML email message with a personalized greeting using the provided username or recipient's name.
+        /// The method creates a basic HTML structure with a paragraph element containing the greeting and appends the provided content to it.
+        /// The resulting HTML body can be used as the body of an email message.
+        /// </remarks>
         private string BuildEmailBody(string UsernameId, string content)
         {
             string body = "<html><body>";
@@ -153,11 +180,36 @@ namespace YouChatServer
         }
 
         /// <summary>
+        /// The "CreateCodeForSMTP" method generates a random alphanumeric code of length 6 for use in SMTP messages.
+        /// </summary>
+        /// <returns>A randomly generated alphanumeric code.</returns>
+        /// <remarks>
+        /// This method creates a string of uppercase and lowercase letters along with digits (0-9).
+        /// It then selects random characters from this string to construct a 6-character alphanumeric code.
+        /// The generated code is suitable for use in verification or renewal emails sent via SMTP.
+        /// </remarks>
+        private string CreateCodeForSMTP()
+        {
+            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, 6).Select(s =>
+            s[random.Next(s.Length)]).ToArray());
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        /// <summary>
         /// The "SendFriendRequestAlertToUserEmail" method sends a friend request alert email to the specified user's email address.
         /// </summary>
-        /// <param name="UsernameId">The username of the recipient.</param>
-        /// <param name="friendId">The ID of the friend who sent the request.</param>
+        /// <param name="UsernameId">The username or recipient's name.</param>
+        /// <param name="friendId">The ID of the user sending the friend request.</param>
         /// <param name="DestinationEmail">The email address of the recipient.</param>
+        /// <remarks>
+        /// This method constructs an email message with a friend request alert and sends it to the specified user's email address.
+        /// The email message includes a predefined subject and a personalized message indicating that a friend request has been sent.
+        /// </remarks>
         public void SendFriendRequestAlertToUserEmail(string UsernameId, string friendId, string DestinationEmail)
         {
             string subject = "YouChat Friend Request";
@@ -167,11 +219,15 @@ namespace YouChatServer
         }
 
         /// <summary>
-        /// The "SendCodeToUserEmail" method sends a verification code email to the user's email address based on the message type.
+        /// The "SendCodeToUserEmail" method sends a verification or renewal code email to the specified user's email address.
         /// </summary>
-        /// <param name="UsernameId">The username of the recipient.</param>
+        /// <param name="UsernameId">The username or recipient's name.</param>
         /// <param name="DestinationEmail">The email address of the recipient.</param>
-        /// <param name="smtpMessageType_Enum">The type of SMTP message to send.</param>
+        /// <param name="smtpMessageType_Enum">The type of SMTP message to send (registration, login, or password renewal).</param>
+        /// <remarks>
+        /// This method generates a verification or renewal code, determines the email subject based on the SMTP message type,
+        /// constructs the email content using predefined email body parts and the generated code, and sends the email to the specified user's email address.
+        /// </remarks>
         public void SendCodeToUserEmail(string UsernameId, string DestinationEmail, EnumHandler.SmtpMessageType_Enum smtpMessageType_Enum)
         {
             SmtpCode = CreateCodeForSMTP();
@@ -194,24 +250,18 @@ namespace YouChatServer
         }
 
         /// <summary>
-        /// The "CreateCodeForSMTP" method creates a random 6-character code for SMTP verification.
+        /// The "GetSmtpCode" method retrieves the currently stored SMTP code.
         /// </summary>
-        /// <returns>A randomly generated code.</returns>
-        private string CreateCodeForSMTP()
-        {
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var random = new Random();
-            return new string(Enumerable.Repeat(chars, 6).Select(s =>
-            s[random.Next(s.Length)]).ToArray());
-        }
-
-        /// <summary>
-        /// The "GetSmtpCode" method retrieves the current SMTP verification code.
-        /// </summary>
-        /// <returns>The SMTP verification code as a string.</returns>
+        /// <returns>The currently stored SMTP code.</returns>
+        /// <remarks>
+        /// This method returns the SMTP code that was previously generated by the application.
+        /// The SMTP code is used for verification or renewal purposes in SMTP messages.
+        /// </remarks>
         public string GetSmtpCode()
         {
             return SmtpCode;
         }
+
+        #endregion
     }
 }

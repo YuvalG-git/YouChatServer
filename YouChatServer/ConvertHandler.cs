@@ -8,17 +8,21 @@ using System.Threading.Tasks;
 
 namespace YouChatServer
 {
+    /// <summary>
+    /// The "ConvertHandler" class provides methods for converting images to and from byte arrays.
+    /// </summary>
     internal class ConvertHandler
     {
-        public static Image ConvertBytesToImage(byte[] imageBytes)
-        {
-            using (MemoryStream ms = new MemoryStream(imageBytes))
-            {
-                Image image = Image.FromStream(ms);
-                return image;
-            }
-        }
+        #region Public Static Methods
 
+        /// <summary>
+        /// The "ConvertImageToBytes" method converts an Image object to a byte array.
+        /// </summary>
+        /// <param name="image">The Image object to convert.</param>
+        /// <returns>A byte array representing the Image object.</returns>
+        /// <remarks>
+        /// This method saves the Image object to a MemoryStream as a JPEG image, then converts the MemoryStream to a byte array.
+        /// </remarks>
         public static byte[] ConvertImageToBytes(Image image)
         {
             using (MemoryStream ms = new MemoryStream())
@@ -27,5 +31,7 @@ namespace YouChatServer
                 return ms.ToArray();
             }
         }
+
+        #endregion
     }
 }

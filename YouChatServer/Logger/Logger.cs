@@ -8,16 +8,38 @@ using System.Windows.Forms;
 
 namespace YouChatServer
 {
+    /// <summary>
+    /// The "Logger" class provides logging functionality for various events in the application.
+    /// </summary>
     internal class Logger
     {
-        //private static readonly string logFileName = "LogFile.txt";
-        //private static readonly string logFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "YouChatSever", "LogFile.txt");
-        //private static readonly string logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, logFileName);
+        #region Private Static Fields
+
+        /// <summary>
+        /// The StreamWriter object "logFile" is used for writing log messages to a file.
+        /// </summary>
         private static StreamWriter logFile;
 
-        private static string logDirectory = Path.Combine("Log", "LogsFolder");
+        #endregion
 
+        #region Private Static Readonly Fields
 
+        /// <summary>
+        /// The string constant 'logDirectory' represents the directory path where log files are stored.
+        /// </summary>
+        private static readonly string logDirectory = Path.Combine("Log", "LogsFolder");
+
+        #endregion
+
+        #region Static Constructor
+
+        /// <summary>
+        /// Static constructor for the <see cref="Logger"/> class.
+        /// </summary>
+        /// <remarks>
+        /// This constructor initializes the logger by creating a log directory and file.
+        /// It sets up the log file for writing, including creating a unique log file name based on the current date.
+        /// </remarks>
         static Logger()
         {
             string projectDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -34,85 +56,112 @@ namespace YouChatServer
                 string logFilePath = Path.Combine(logDirectory, logFileName);
                 logFile = new StreamWriter(logFilePath, true);
                 logFile.AutoFlush = true; // Automatically flush the buffer after each write.
-                //AppDomain.CurrentDomain.ProcessExit += ProcessExitHandler;
-                Application.ApplicationExit += new EventHandler(ApplicationExitHandler);
             }
             catch (Exception ex)
             {
-                // Log or print the exception details for debugging.
                 Console.WriteLine($"Failed to create log file: {ex}");
             }
         }
-        //private static void ProcessExitHandler(object sender, EventArgs e)
-        //{
-        //    CloseLogFiles();
-        //}
 
-        private static void ApplicationExitHandler(object sender, EventArgs e)
-        {
-            // Add a "server down" message to the log before closing
-            LogInfo("Server down. Application is shutting down...");
+        #endregion
 
-            // Perform any necessary cleanup before the application exits
-            CloseLogFiles();
-        }
-        //static Logger()
-        //{
-        //    string projectDirectory1 = AppDomain.CurrentDomain.BaseDirectory;
-        //    string projectDirectory2 = AppDomain.CurrentDomain.BaseDirectory.Replace("\\bin\\Debug","");
+        #region Public Static Methods
 
-        //    string logDirectory1 = Path.Combine(projectDirectory1, GeneralLogDirectory);
-        //    string logDirectory2 = Path.Combine(projectDirectory2, GeneralLogDirectory);
-
-        //    try
-        //    {
-        //        Directory.CreateDirectory(logDirectory1);
-        //        Directory.CreateDirectory(logDirectory2);
-
-        //        // Generate a unique log file name based on the current date.
-        //        string logFileName = $"log_{DateTime.Now:yyyy-MM-dd}.txt";
-
-        //        // Create or open the log file for writing (append mode).
-        //        string logFilePath1 = Path.Combine(logDirectory1, logFileName);
-        //        logFile1 = new StreamWriter(logFilePath1, true);
-        //        logFile1.AutoFlush = true; // Automatically flush the buffer after each write.
-        //        string logFilePath2 = Path.Combine(logDirectory2, logFileName);
-        //        logFile2 = new StreamWriter(logFilePath2, true);
-        //        logFile2.AutoFlush = true; // Automatically flush the buffer after each write
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log or print the exception details for debugging.
-        //        Console.WriteLine($"Failed to create log file: {ex}");
-        //    }
-        //}
-
+        /// <summary>
+        /// The "LogUserLogIn" method logs a user login event with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "LOG IN".
+        /// </remarks>
         public static void LogUserLogIn(string message)
         {
             Log("LOG IN", message);
-
         }
+        /// <summary>
+        /// The "LogUserLogOut" method logs a user logout event with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "LOG OUT".
+        /// </remarks>
         public static void LogUserLogOut(string message)
         {
             Log("LOG OUT", message);
-
         }
-        public static void LogUserBan(string message)
+        /// <summary>
+        /// The "LogUserBanStart" method logs the start of a user ban with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "BAN".
+        /// </remarks>
+        public static void LogUserBanStart(string message)
         {
-            Log("Ban", message);
-
+            Log("BAN", message);
         }
+
+        /// <summary>
+        /// The "LogUserBanOver" method logs the end of a user ban with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "BAN OVER".
+        /// </remarks>
+        public static void LogUserBanOver(string message)
+        {
+            Log("BAN OVER", message);
+        }
+
+        /// <summary>
+        /// The "LogUserDOSProtection" method logs a message related to DOS protection with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "DOS PROTECTION".
+        /// </remarks>
+        public static void LogUserDOSProtection(string message)
+        {
+            Log("DOS PROTECTION", message);
+        }
+
+        /// <summary>
+        /// The "LogUserSocketConnection" method logs a message related to socket connection with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "SOCKET CONNECTION".
+        /// </remarks>
+        public static void LogUserSocketConnection(string message)
+        {
+            Log("SOCKET CONNECTION", message);
+        }
+
+        /// <summary>
+        /// The "LogInfo" method logs an informational message with the specified message.
+        /// </summary>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method calls the Log method with the log level set to "INFO".
+        /// </remarks>
         public static void LogInfo(string message)
         {
             Log("INFO", message);
         }
 
-        public static void LogError(string message)
-        {
-            Log("ERROR", message);
-        }
+        #endregion
 
+        #region Private Static Methods
 
+        /// <summary>
+        /// The "Log" method logs a message with the specified log level.
+        /// </summary>
+        /// <param name="level">The log level (e.g., INFO, LOG IN, LOG OUT).</param>
+        /// <param name="message">The message to be logged.</param>
+        /// <remarks>
+        /// This method creates a log entry with the current timestamp, log level, and the provided message.
+        /// It then attempts to write the log entry to the log file. If an exception occurs during logging (e.g., file access issues), it is caught and displayed in the console.
+        /// </remarks>
         private static void Log(string level, string message)
         {
             string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}";
@@ -120,18 +169,13 @@ namespace YouChatServer
             try
             {
                 logFile.WriteLine(logEntry);
-
             }
             catch (Exception ex)
             {
-                // Handle any exceptions that may occur during logging, e.g., file access issues.
                 Console.WriteLine($"Failed to log: {ex}");
             }
         }
-        public static void CloseLogFiles()
-        {
-            logFile.Close();
-            logFile.Dispose();
-        }
+
+        #endregion
     }
 }

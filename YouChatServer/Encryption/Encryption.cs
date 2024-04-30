@@ -24,20 +24,6 @@ namespace YouChatServer.Encryption
             byte[] EncryptedMessageAsBytes = AESServiceProvider.EncryptToBytes(Message, Key, IV);
             return EncryptedMessageAsBytes;
         }
-        public static byte[] EncryptData(string SymmetricKey, Image image)
-        {
-            byte[] Key = Encoding.UTF8.GetBytes(SymmetricKey);
-            byte[] IV = new byte[16];
-            byte[] imageBytes;
-
-            using (MemoryStream ms = new MemoryStream())
-            {
-                image.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg); // You can use other formats like PNG or GIF.
-                imageBytes = ms.ToArray();
-            }
-            byte[] EncryptedMessageAsBytes = AESServiceProvider.EncryptToBytes(imageBytes, Key, IV);
-            return EncryptedMessageAsBytes;
-        }
 
         public static string DecryptData(string SymmetricKey, string Message)
         {

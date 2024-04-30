@@ -26,31 +26,17 @@ using YouChatServer.ContactHandler;
 namespace YouChatServer.UserDetails
 {
     /// <summary>
-    /// The DataHandler class is responsible for the SQL DataBase functions
+    /// The "DataHandler" class is responsible for the SQL DataBase functions
     /// </summary>
     internal static class DataHandler
     {
-        static string projectFolderPath = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
-        static string connectionString;
+        private static string projectFolderPath = Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
+        private static string connectionString;
 
 
-        static SqlConnection connection = new SqlConnection(SqlRelativePath());
-        /// <summary>
-        /// Represents the connection string used to connect to the SQL Server database
-        /// (represents the database location)
-        /// </summary>
-        //static string connectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\יובל\source\repos\YouChatServer\YouChatServer\UserDetails\UserDetails.mdf;Integrated Security=True";
-        //C:\Users\יובל\source\repos\YouChatServer\YouChatServer\UserList.mdf
+        private static readonly SqlConnection connection = new SqlConnection(SqlRelativePath());
 
-        ///// <summary>
-        ///// Represents a connection object to a SQL Server database
-        ///// </summary>
-        //static SqlConnection connection = new SqlConnection(connectionString);
-
-        /// <summary>
-        /// Represents a SQL command object which is used to define and execute database commands
-        /// </summary>
-        static SqlCommand cmd = new SqlCommand();
+        private static readonly SqlCommand cmd = new SqlCommand();
 
         private static string SqlRelativePath()
         {

@@ -8,16 +8,26 @@ using System.Threading.Tasks;
 namespace YouChatServer.UdpHandler
 {
     /// <summary>
-    /// The "IpEndPointHandler" class provides methods for managing IP endpoints in a dictionary.
+    /// The "IpEndPointHandler" class provides static methods for managing IP endpoints and client keys dictionaries used in UDP communication.
     /// </summary>
+    /// <remarks>
+    /// This class includes methods for removing endpoints from the dictionary based on a provided local endpoint, as well as updating an endpoint with a new endpoint.
+    /// These methods are used to manage the mapping between client IP endpoints and server IP endpoints for communication.
+    /// </remarks>
     public class IpEndPointHandler
     {
+        #region Public Static Methods
+
         /// <summary>
-        /// The "RemoveEndpoints" method removes endpoints from the dictionary based on the provided local endpoint.
+        /// The "RemoveEndpoints" method removes endpoints from the endpoint dictionary and client keys dictionary based on the provided local endpoint.
         /// </summary>
         /// <param name="localEndpoint">The local endpoint to match against.</param>
-        /// <param name="endpointDictionary">The dictionary of endpoints to modify.</param>
-        /// <param name="clientKeys">The dictionary of client keys to modify.</param>
+        /// <param name="endpointDictionary">The dictionary containing the endpoints.</param>
+        /// <param name="clientKeys">The dictionary containing client keys.</param>
+        /// <remarks>
+        /// This method iterates through the endpoint dictionary and removes entries where either the key or the value matches the local endpoint.
+        /// It also removes the corresponding entry from the client keys dictionary.
+        /// </remarks>
         public static void RemoveEndpoints(IPEndPoint localEndpoint, Dictionary<IPEndPoint, IPEndPoint> endpointDictionary, Dictionary<IPEndPoint, string> clientKeys)
         {
             IPEndPoint friendEndpoint = null;
@@ -50,11 +60,15 @@ namespace YouChatServer.UdpHandler
         }
 
         /// <summary>
-        /// The "UpdateEndPoint" method updates the endpoint in the dictionary with a new endpoint for a client.
+        /// The "UpdateEndPoint" method updates an endpoint in the dictionary with a new endpoint.
         /// </summary>
-        /// <param name="endpoints">The dictionary of endpoints to update.</param>
-        /// <param name="clientEndPoint">The old endpoint of the client.</param>
-        /// <param name="newEndPoint">The new endpoint for the client.</param>
+        /// <param name="endpoints">The dictionary containing the endpoints.</param>
+        /// <param name="clientEndPoint">The endpoint to update.</param>
+        /// <param name="newEndPoint">The new endpoint to replace the existing endpoint.</param>
+        /// <remarks>
+        /// This method iterates through the keys of the dictionary and updates the value associated with the clientEndPoint to newEndPoint.
+        /// If clientEndPoint is found as a key, its corresponding value is updated to newEndPoint.
+        /// </remarks>
         public static void UpdateEndPoint(Dictionary<IPEndPoint, IPEndPoint> endpoints, IPEndPoint clientEndPoint, IPEndPoint newEndPoint)
         {
             var keys = endpoints.Keys.ToList();
@@ -73,5 +87,7 @@ namespace YouChatServer.UdpHandler
                 }
             }
         }
+
+        #endregion
     }
 }

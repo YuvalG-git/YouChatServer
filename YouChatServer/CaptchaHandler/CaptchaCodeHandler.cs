@@ -13,19 +13,32 @@ namespace YouChatServer.CaptchaHandler
     /// </summary>
     internal class CaptchaCodeHandler 
     {
+        #region Private Fields
+
         /// <summary>
         /// The string object "code" stores the generated CAPTCHA code.
         /// </summary>
         private string code;
+
+        #endregion
+
+        #region Private Static Fields
 
         /// <summary>
         /// The List of Image objects "captchaBackground" stores the background images used for generating CAPTCHA.
         /// </summary>
         private static List<Image> captchaBackground;
 
+        #endregion
+
+        #region Constructors
+
         /// <summary>
-        /// The "CaptchaCodeHandler" constructor initializes a new instance of the <see cref="CaptchaCodeHandler"/> class by initializes the list of captcha backgrounds.
+        /// The "CaptchaCodeHandler" constructor initializes a new instance of the <see cref="CaptchaCodeHandler"/> class.
         /// </summary>
+        /// <remarks>
+        /// This constructor sets up the captcha background images for generating captcha codes.
+        /// </remarks>
         public CaptchaCodeHandler()
         {
             captchaBackground = new List<Image>
@@ -37,20 +50,37 @@ namespace YouChatServer.CaptchaHandler
             };
         }
 
+        #endregion
+
+        #region Public Methods
+
         /// <summary>
-        /// The CompareCode method compares the provided code with the generated code.
+        /// The "CompareCode" method compares the received code with the internally stored code.
         /// </summary>
-        /// <param name="receivedCode">The code to compare.</param>
-        /// <returns>True if the codes match, false otherwise.</returns>
+        /// <param name="receivedCode">The code received from a client.</param>
+        /// <returns>
+        /// True if the received code matches the internally stored code, otherwise false.
+        /// </returns>
+        /// <remarks>
+        /// This method compares the received code with the code stored internally. It returns true if the received code
+        /// matches the stored code, indicating a successful comparison. Otherwise, it returns false, indicating a mismatch.
+        /// </remarks>
         public bool CompareCode(string recievedCode)
         {
-            return (recievedCode == code);
+            return recievedCode == code;
         }
 
         /// <summary>
-        /// The "CreateCatpchaBitmap" method generates a new CAPTCHA code and bitmap image.
+        /// The "CreateCatpchaBitmap" method generates a captcha image with a random string.
         /// </summary>
-        /// <returns>The generated bitmap image containing the CAPTCHA code.</returns>
+        /// <returns>
+        /// An Image object containing the captcha image.
+        /// </returns>
+        /// <remarks>
+        /// This method creates a captcha image with a random string of characters. It selects a random background image
+        /// from a collection of background images and draws the captcha text onto it. The generated captcha image is returned
+        /// as an Image object.
+        /// </remarks>
         public Image CreateCatpchaBitmap()
         {
             code = RandomStringCreator.RandomString(8,true);
@@ -87,5 +117,7 @@ namespace YouChatServer.CaptchaHandler
             }
             return bitmap;
         }
+
+        #endregion
     }
 }
