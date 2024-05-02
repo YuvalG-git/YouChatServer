@@ -90,14 +90,14 @@ namespace YouChatServer.UdpHandler
 
                     // Decrypt the received data using the client's encryption key
                     string key = clientKeys[clientEndPoint];
-                    byte[] decryptedData = Encryption.Encryption.DecryptDataToBytes(key, encryptedData);
+                    byte[] decryptedData = Encryption.AESServiceProvider.DecryptDataToBytes(key, encryptedData);
 
                     // Get the recipient client's endpoint and encryption key
                     IPEndPoint friendIpEndPoint = EndPoints[clientEndPoint];
                     string friendKey = clientKeys[friendIpEndPoint];
 
                     // Re-encrypt the decrypted data using the recipient client's encryption key
-                    byte[] serverEncryptedData = Encryption.Encryption.EncryptDataToBytes(friendKey, decryptedData);
+                    byte[] serverEncryptedData = Encryption.AESServiceProvider.EncryptDataToBytes(friendKey, decryptedData);
 
                     // Send the re-encrypted data to the recipient client
                     AudioUdpClient.Send(serverEncryptedData, serverEncryptedData.Length, friendIpEndPoint);

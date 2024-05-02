@@ -14,4 +14,10 @@
     <Content>hi</Content>
     <Date>2024-05-02 19:48:54</Date>
   </Message>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-05-02 21:17:05</Date>
+  </Message>
 </Chat>

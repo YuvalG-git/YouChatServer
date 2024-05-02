@@ -84,9 +84,7 @@
     <Compile Include="ContactHandler\Contacts.cs" />
     <Compile Include="ConvertHandler.cs" />
     <Compile Include="Encryption\EncryptionExpirationDate.cs" />
-    <Compile Include="Encryption\AESServiceProvider - Copy.cs" />
     <Compile Include="Encryption\AESServiceProvider.cs" />
-    <Compile Include="Encryption\Encryption.cs" />
     <Compile Include="Encryption\MD5.cs" />
     <Compile Include="Encryption\RSAServiceProvider.cs" />
     <Compile Include="EnumHandler\EnumConverter.cs" />

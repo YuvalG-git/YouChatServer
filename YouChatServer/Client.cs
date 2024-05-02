@@ -2438,7 +2438,7 @@ namespace YouChatServer
                             // if the client is sending send me datatable
                             if (receivedByteSignal == 1)
                             {
-                                actualMessage = Encryption.Encryption.DecryptData(SymmetricKey, actualMessage);
+                                actualMessage = Encryption.AESServiceProvider.DecryptData(SymmetricKey, actualMessage);
                             }
                             JsonObject jsonObject = JsonConvert.DeserializeObject<JsonObject>(actualMessage, new JsonSerializerSettings
                             {
@@ -2641,7 +2641,7 @@ namespace YouChatServer
 
                 if (needEncryption)
                 {
-                    jsonMessage = Encryption.Encryption.EncryptData(SymmetricKey, jsonMessage);
+                    jsonMessage = Encryption.AESServiceProvider.EncryptData(SymmetricKey, jsonMessage);
                 }
                 byte[] jsonMessageBytes = System.Text.Encoding.UTF8.GetBytes(jsonMessage);
 
