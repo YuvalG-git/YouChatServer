@@ -1,0 +1,17 @@
+<Chat>
+  <ChatName>GroupChat - 65M03R - dsdsfdsf</ChatName>
+  <ChatId>65M03R</ChatId>
+  <Participants>yuval, einat, sivan, nadav</Participants>
+  <Message>
+    <Sender>yuval</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-05-02 19:47:40</Date>
+  </Message>
+  <Message>
+    <Sender>sivan</Sender>
+    <Type>Text</Type>
+    <Content>hi</Content>
+    <Date>2024-05-02 19:48:54</Date>
+  </Message>
+</Chat>

@@ -605,7 +605,7 @@ namespace YouChatServer
         /// a friend request is added to the database and an alert email is sent to the receiver.
         /// If the receiver is online, a notification is sent immediately; otherwise, it is sent when the receiver logs in.
         /// </remarks>
-        private void HandleFriendRequestSenderEnum(JsonObject jsonObject) //todo - not finished...
+        private void HandleFriendRequestSenderEnum(JsonObject jsonObject)
         {
             FriendRequestDetails friendRequestDetails = jsonObject.MessageBody as FriendRequestDetails;
             string FriendRequestReceiverUsername = friendRequestDetails.Username;
@@ -722,7 +722,6 @@ namespace YouChatServer
                         ContactDetails friendRequestReceiverUsernameContact = DataHandler.GetFriendProfileInformation(FriendRequestReceiverUsername);
                         ContactAndChat friendRequestReceiverUsernameContactAndChat = new ContactAndChat(directChat, friendRequestReceiverUsernameContact);
 
-                        messageType = EnumHandler.CommunicationMessageID_Enum.FriendRequestResponseReciever;
                         messageContent = friendRequestReceiverUsernameContactAndChat;
                         Unicast(messageType, messageContent, FriendRequestSenderUsername);
                     }
@@ -2127,10 +2126,19 @@ namespace YouChatServer
                 JsonClasses.Message message = new JsonClasses.Message(messageSenderName, chatId, messageContentValue, messageDateAndTime);
                 messages.Add(message);
             }
-            MessageHistory messageHistory = new MessageHistory(messages);
 
             EnumHandler.CommunicationMessageID_Enum messageType = EnumHandler.CommunicationMessageID_Enum.MessageHistoryResponse;
-            object messageContent = messageHistory;
+            object messageContent;
+            if (messages.Count == 0)
+            {
+                messageContent = chatId;
+            }
+            else
+            {
+                MessageHistory messageHistory = new MessageHistory(messages);
+                messageContent = messageHistory;
+
+            }
             SendMessage(messageType, messageContent);
         }
 
@@ -2198,8 +2206,6 @@ namespace YouChatServer
         /// </remarks>
         private void HandleEndVideoCallRequestEnum(JsonObject jsonObject)
         {
-
-
             VideoCallOverDetails videoCallOverDetails = jsonObject.MessageBody as VideoCallOverDetails;
             string chatId = videoCallOverDetails.ChatId;
             int audioPort = videoCallOverDetails.AudioSocketPort;
@@ -2221,14 +2227,11 @@ namespace YouChatServer
                     _inCall = false;
                     SetUserInCall(friendName, false);
 
-
                     IPEndPoint audioIPEndPoint = new IPEndPoint(_clientAddress, audioPort);
                     IpEndPointHandler.RemoveEndpoints(audioIPEndPoint, AudioUdpHandler.EndPoints, AudioUdpHandler.clientKeys);
 
                     IPEndPoint videoIPEndPoint = new IPEndPoint(_clientAddress, videoPort);
-                    IpEndPointHandler.RemoveEndpoints(videoIPEndPoint, VideoUdpHandler.EndPoints, VideoUdpHandler.clientKeys);
-
-               
+                    IpEndPointHandler.RemoveEndpoints(videoIPEndPoint, VideoUdpHandler.EndPoints, VideoUdpHandler.clientKeys);        
                 }
             }
             catch
