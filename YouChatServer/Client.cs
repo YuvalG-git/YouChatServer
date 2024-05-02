@@ -398,7 +398,7 @@ namespace YouChatServer
             LoginDetails loginDetails = jsonObject.MessageBody as LoginDetails;
             string username = loginDetails.Username;
             string password = loginDetails.Password;
-            if ((DataHandler.isMatchingUsernameAndPasswordExist(username, password)) && (!UserIsConnected(username)))
+            if ((DataHandler.IsMatchingUsernameAndPasswordExist(username, password)) && (!UserIsConnected(username)))
             {
                 _ClientNick = username;
                 string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
@@ -458,7 +458,10 @@ namespace YouChatServer
         private void HandleSmtpLoginMessage(string username)
         {
             string emailAddress = DataHandler.GetEmailAddress(_ClientNick);
-            smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
+            if (emailAddress != "")
+            {
+                smtpHandler.SendCodeToUserEmail(username, emailAddress, EnumHandler.SmtpMessageType_Enum.LoginMessage);
+            }
             EnumHandler.CommunicationMessageID_Enum messageType = EnumHandler.CommunicationMessageID_Enum.loginResponse_SmtpLoginMessage;
             object messageContent = null;
             SendMessage(messageType, messageContent);
@@ -628,7 +631,10 @@ namespace YouChatServer
                             if (DataHandler.AddFriendRequest(FriendRequestSenderUsername, FriendRequestReceiverUsername) > 0)
                             {
                                 string emailAddress = DataHandler.GetEmailAddress(FriendRequestReceiverUsername);
-                                smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress);
+                                if (emailAddress != "")
+                                {
+                                    smtpHandler.SendFriendRequestAlertToUserEmail(FriendRequestReceiverUsername, FriendRequestSenderUsername, emailAddress);
+                                }
 
                                 string profilePicture = DataHandler.GetProfilePicture(FriendRequestSenderUsername);
                                 DateTime currentTime = DateTime.Now;
@@ -848,7 +854,7 @@ namespace YouChatServer
             string dateOfBirthAsString = dateOfBirth.ToString("yyyy-MM-dd");
             string registrationDateAsString = registrationDate.ToString("yyyy-MM-dd");
 
-            if (!DataHandler.usernameIsExist(username) && !DataHandler.EmailAddressIsExist(emailAddress))
+            if (!DataHandler.UsernameIsExist(username) && !DataHandler.EmailAddressIsExist(emailAddress))
             {
                 EnumHandler.CommunicationMessageID_Enum RegistrationResponseEnum;
                 if (DataHandler.InsertUser(username, password, firstName, lastName, emailAddress, cityName, gender, dateOfBirthAsString, registrationDateAsString, VerificationQuestionsAndAnswers) > 0)
@@ -1249,7 +1255,7 @@ namespace YouChatServer
             {
                 _PasswordUpdateFailedAttempts = new ClientAttemptsState(this, EnumHandler.UserAuthentication_Enum.PasswordUpdate);
             }
-            if (!DataHandler.isMatchingUsernameAndPasswordExist(username, pastPassword)) 
+            if (!DataHandler.IsMatchingUsernameAndPasswordExist(username, pastPassword)) 
             {
                 HandleFailedAttempt(_PasswordUpdateFailedAttempts, EnumHandler.CommunicationMessageID_Enum.PasswordUpdateBanStart, SendUnmatchedDetailsPasswordUpdateResponse);
             }
@@ -2382,7 +2388,6 @@ namespace YouChatServer
         /// the method calls the appropriate handler method to process the message. Finally, the method resets the dataHistory array and
         /// prepares to receive the next message length from the client.
         /// </remarks>
-
         public void ReceiveMessage(IAsyncResult ar)
         {
             if (_client != null)
